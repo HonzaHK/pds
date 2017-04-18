@@ -3,9 +3,12 @@
 #include <stdlib.h>
 #include <string.h> 
 #include <unistd.h>
+#include <iostream>
 
 #include <pcap.h>
 #include <arpa/inet.h>
+
+using namespace std;
 
 typedef struct {
 	char* ifName;
@@ -24,15 +27,16 @@ typedef struct arphdr {
     u_char hlen;        /* Hardware Address Length */ 
     u_char plen;        /* Protocol Address Length */ 
     u_int16_t oper;     /* Operation Code          */ 
-    u_char sha[6];      /* Sender hardware address */ 
-    u_char spa[4];      /* Sender IP address       */ 
-    u_char tha[6];      /* Target hardware address */ 
-    u_char tpa[4];      /* Target IP address       */ 
+    u_char src_mac[6];      /* Sender hardware address */ 
+    u_char src_ip[4];      /* Sender IP address       */ 
+    u_char dst_mac[6];      /* Target hardware address */ 
+    u_char dst_ip[4];      /* Target IP address       */ 
 } arphdr_t;
 #define MAXBYTES2CAPTURE 2048
 
 typedef struct host {
 	u_char mac[6];
+	u_char ip[4];
 } host_t;
 
 int parseArgs(int argc, char* argv[], clargs_t *clargs){
@@ -68,45 +72,110 @@ int parseArgs(int argc, char* argv[], clargs_t *clargs){
 	return 0;
 }
 
-void printAllDevs(){
-	
-	pcap_if_t *alldevs;
-    pcap_if_t *d;
-    int i=0;
-	char errbuf[PCAP_ERRBUF_SIZE];
-    
-    /* Retrieve the device list from the local machine */
-    if (pcap_findalldevs(&alldevs, errbuf) == -1)
-    {
-        fprintf(stderr,"Error in pcap_findalldevs_ex: %s\n", errbuf);
-        exit(1);
-    }
-    
-    /* Print the list */
-    for(d= alldevs; d != NULL; d= d->next)
-    {
-        printf("%d. %s", ++i, d->name);
-        if (d->description)
-            printf(" (%s)\n", d->description);
-        else
-            printf(" (No description available)\n");
-    }
+void mac_print(u_char mac[6]){
+	printf("%02X:%02X:%02X:%02X:%02X:%02X", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 }
 
-bool isSaved(host_t **hostlist, int dev_cnt, u_char mac[6]){
-	bool found = false;
-	int a[6] = {1,2,3,4,5,6};
-	int b[6] = {1,2,3,4,5,6};
-	for(int i=0;i<dev_cnt;i++){
-		host_t *host = hostlist[i];
+void ipv4_print(u_char ip[4]){
+	printf("%d.%d.%d.%d", ip[0],ip[1],ip[2],ip[3]);
+}
 
-		if(memcmp(host->mac, mac, 6)==0){
-			found=true;
+void hosts_print(host_t* hosts, int host_cnt){
+	printf("<devices>\n");
+	for(int i=0;i<host_cnt;i++){
+		host_t tmp = hosts[i];
+		printf("\t<host mac=\"");mac_print(tmp.mac);printf("\">\n");
+		printf("\t\t<ipv4>");ipv4_print(tmp.ip);printf("</ipv4>\n");
+		printf("\t</host>\n");
+	}
+	printf("</devices>\n");
+}
+
+host_t* host_lookup(host_t* hosts, int host_cnt, u_char mac[6]){
+	host_t* h = NULL;
+
+	for(int i=0;i<host_cnt;i++){
+		host_t tmp = hosts[i];
+
+		if(memcmp(tmp.mac, mac, 6)==0){
+			h=&tmp;
 			break;
 		}
 	}
 
-	return found;
+	return h;
+}
+
+void arp_print(arphdr_t *arpheader){
+	printf("src MAC: "); mac_print(arpheader->src_mac);printf("\n");
+	printf("src IP : "); ipv4_print(arpheader->src_ip);printf("\n");
+	printf("dst MAC: "); mac_print(arpheader->dst_mac);printf("\n");
+	printf("dst IP : "); ipv4_print(arpheader->dst_ip);printf("\n");
+	printf("\n");
+
+	return;
+}
+
+void ipv4_scan(in_addr netw, in_addr mask, host_t* hosts, int* host_cnt, pcap_t* ifHandle){
+
+	char netw_str[13];
+	char mask_str[13];
+
+	strcpy(netw_str, inet_ntoa(netw));
+	if (netw_str == NULL){ perror("inet_ntoa"); return; }
+	strcpy(mask_str, inet_ntoa(mask));
+	if (mask_str == NULL){ perror("inet_ntoa"); return; }
+
+	printf("netw: %s\n", netw_str);
+	printf("mask: %s\n", mask_str);
+
+	// for (int i=0;i<255;i++){
+	// 	in_addr tmp;
+	// 	tmp.s_addr = htonl(ntohl(netw.s_addr) + (i+1));
+	// 	cout << inet_ntoa(tmp) << endl;
+	// }
+
+
+	struct pcap_pkthdr *pkthdr = NULL;
+	const unsigned char *packet=NULL;
+	arphdr_t *arpheader = NULL;
+
+	int res=0,i=0;
+	while ( (res = pcap_next_ex(ifHandle,&pkthdr,&packet)) >= 0){  /* Get one packet */ 
+		i++;
+		if(res==0){continue;}
+		arpheader = (struct arphdr *)(packet+14); /* Point to the ARP header */ 
+
+		// printf("\n\nReceived Packet Size: %d bytes\n", pkthdr.len); 
+		// printf("Hardware type: %s\n", (ntohs(arpheader->htype) == 1) ? "Ethernet" : "Unknown"); 
+		// printf("Protocol type: %s\n", (ntohs(arpheader->ptype) == 0x0800) ? "IPv4" : "Unknown"); 
+		// printf("Operation: %s\n", (ntohs(arpheader->oper) == ARP_REQUEST)? "ARP Request" : "ARP Reply"); 
+
+		/* If is Ethernet and IPv4, print packet contents */ 
+		if (ntohs(arpheader->htype) == 1 && ntohs(arpheader->ptype) == 0x0800){ 
+			printf("------------------------------------\n");
+			//arp_print(arpheader);
+			bool is_hosts_modified = false;
+
+			host_t *h_src = host_lookup(hosts,*host_cnt,arpheader->src_mac);
+			if(h_src==NULL){ //process new host
+				memcpy(hosts[*host_cnt].mac,arpheader->src_mac,sizeof(arpheader->src_mac));
+				memcpy(hosts[*host_cnt].ip,arpheader->src_ip,sizeof(arpheader->src_ip));
+				(*host_cnt)++;
+				is_hosts_modified = true;
+			}
+			else{ //process known host
+
+			}
+
+			if(is_hosts_modified){
+				hosts_print(hosts,*host_cnt);
+			}
+
+		}
+	}
+
+	return;
 }
 
 int main(int argc, char* argv[]){
@@ -120,8 +189,7 @@ int main(int argc, char* argv[]){
 		fprintf(stderr,"fopen() failed\n");
 		return 0;
 	}
-
-	//printAllDevs();
+	
 	char errbuf[PCAP_ERRBUF_SIZE];
 	if ((clargs.ifPtr=pcap_lookupdev(errbuf))==NULL) {
 		fprintf(stderr,"Couldn't find default device: %s\n", errbuf);
@@ -134,66 +202,20 @@ int main(int argc, char* argv[]){
 		return(0);
 	}
 
-	struct pcap_pkthdr *pkthdr;
-	const unsigned char *packet=NULL;
-	arphdr_t *arpheader = NULL;
+	host_t hosts[64];
+	int host_cnt=0;
 
-	host_t **devlist;
+	struct in_addr netw;
+	struct in_addr mask;
+	int lookup_return_code = pcap_lookupnet(
+		clargs.ifPtr,
+		&netw.s_addr,
+		&mask.s_addr,
+		errbuf
+	);
+	if(lookup_return_code!=0){ printf("lookup err\n"); return 0;}
 
-	int i=0;
-	int res=0;
-	int dev_cnt=0;
-	while ( (res = pcap_next_ex(clargs.ifHandle,&pkthdr,&packet)) >= 0){  /* Get one packet */ 
-		i++;
-		// printf("attempt %d: ", i);
-		//if(res==0){printf("timeout\n");}
-		if(res==0){continue;}
-		// printf("%d\n", res);
-
-		arpheader = (struct arphdr *)(packet+14); /* Point to the ARP header */ 
-
-		// printf("\n\nReceived Packet Size: %d bytes\n", pkthdr.len); 
-		// printf("Hardware type: %s\n", (ntohs(arpheader->htype) == 1) ? "Ethernet" : "Unknown"); 
-		// printf("Protocol type: %s\n", (ntohs(arpheader->ptype) == 0x0800) ? "IPv4" : "Unknown"); 
-		// printf("Operation: %s\n", (ntohs(arpheader->oper) == ARP_REQUEST)? "ARP Request" : "ARP Reply"); 
-
-		/* If is Ethernet and IPv4, print packet contents */ 
-		if (ntohs(arpheader->htype) == 1 && ntohs(arpheader->ptype) == 0x0800){ 
-
-			printf("Sender MAC: "); 
-			for(i=0; i<6;i++)
-			printf("%02X:", arpheader->sha[i]); 
-
-			printf("\nSender IP: "); 
-			for(i=0; i<4;i++)
-			printf("%d.", arpheader->spa[i]); 
-
-			printf("\nTarget MAC: "); 
-			for(i=0; i<6;i++)
-			printf("%02X:", arpheader->tha[i]); 
-
-			printf("\nTarget IP: "); 
-			for(i=0; i<4; i++)
-			printf("%d.", arpheader->tpa[i]);
-			printf("\n");
-			printf("\n");
-
-			bool iss = isSaved(devlist,dev_cnt,arpheader->sha);
-			printf("iss: %s\n", iss?"true":"false" );
-			devlist[dev_cnt] = (host_t *)malloc(sizeof(host_t));
-			memcpy(devlist[dev_cnt]->mac,arpheader->sha,sizeof(arpheader->sha));
-			dev_cnt++;
-			// printf("devlist: ----------------\n");
-			// for(int j=0;j<=cnt;j++){
-			// 	for(int x=0;x<6;x++){
-			// 		printf("%02X:", devlist[j]->mac[x]); 
-			// 	}
-			// 	printf("\n");
-			// }
-			printf("\n");
-			printf("\n");
-		}
-	}
+	ipv4_scan(netw,mask,hosts,&host_cnt,clargs.ifHandle);
 	
 	return 0;
 }
