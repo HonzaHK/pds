@@ -1,3 +1,5 @@
+//VUTBR - FIT - PDS project MitM
+//Author: Jan Kubis / xkubis13
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
