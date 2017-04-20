@@ -28,12 +28,15 @@ using namespace std;
 #define ETHHDR_LEN 14 // Ethernet header length
 #define IP4HDR_LEN 20 // IPv4 header length
 #define ARPHDR_LEN 28 // ARP header length
+#define IP6HDR_LEN 40 // IPv6 header length
+#define ICMPV6HDR_LEN 8 // ICMPv6 header
 
 #define ARPPKT_LEN ETHHDR_LEN + ARPHDR_LEN
 
+#define ICMPV6PKT_LEN ETHHDR_LEN + IP6HDR_LEN + ICMPV6HDR_LEN
+
 #define IP4_LEN 4
 #define MAC_LEN 6
-
 typedef u_char ipv4_t[IP4_LEN];
 typedef u_char mac_t[MAC_LEN];
 
@@ -271,6 +274,130 @@ void getifip4(char* ifName, ipv4_t ifip4) {
 	return ;
 }
 
+typedef struct {
+	uint32_t first;
+	uint16_t paylen;
+	uint8_t nextheader;
+	uint8_t hoplimit;
+	uint8_t src[16];
+	uint8_t dst[16];
+} ipv6hdr_t;
+
+typedef struct {
+	uint8_t type;
+	uint8_t code;
+	uint16_t checksum;
+	uint32_t offset;
+} icmpv6hdr_t;
+
+uint16_t cs(uint16_t *icmph, int len){
+
+	uint32_t sum = 0;
+	uint16_t odd_byte;
+	
+	while (len > 1) {
+		sum += *icmph++;
+		len -= 2;
+	}
+	
+	if (len == 1) {
+		*(uint8_t*)(&odd_byte) = * (uint8_t*)icmph;
+		sum += odd_byte;
+	}
+	
+	sum =  (sum >> 16) + (sum & 0xffff);
+	sum += (sum >> 16);
+	sum = ~sum;
+	
+	return sum; 
+}
+
+typedef struct {
+	uint8_t src[16];
+	uint8_t dst[16];
+	uint32_t icmpv6len;
+	uint32_t last;
+	uint8_t icmpv6hdr[8];
+} ph_t;
+
+uint8_t* icmpv6_pkt_build(mac_t ifmac){
+	struct ether_header ethhdr;
+
+	mac_t bcast_mac;
+	bcast_mac[0] = 0x33;
+	bcast_mac[1] = 0x33;
+	bcast_mac[2] = 0x00;
+	bcast_mac[3] = 0x00;
+	bcast_mac[4] = 0x00;
+	bcast_mac[5] = 0x01;
+
+	memcpy(ethhdr.ether_dhost, &bcast_mac, MAC_LEN);
+	memcpy(ethhdr.ether_shost, ifmac, MAC_LEN);
+	mac_print(ifmac);
+	printf("\n");
+	mac_print(ethhdr.ether_shost);
+	printf("\n");
+	ethhdr.ether_type = htons(0x86dd);
+
+
+	ipv6hdr_t ipv6hdr;
+	ipv6hdr.first= (6<<4);
+	ipv6hdr.paylen=htons(ICMPV6HDR_LEN);
+	ipv6hdr.nextheader= 0x3a;
+	ipv6hdr.hoplimit=1;
+	ipv6hdr.src[0]=0xfe;
+	ipv6hdr.src[1]=0x80;
+	ipv6hdr.src[2]=ipv6hdr.src[3]=ipv6hdr.src[4]=ipv6hdr.src[5]=ipv6hdr.src[6]=ipv6hdr.src[7]=0x00;
+	ipv6hdr.src[8]=0x7a;
+	ipv6hdr.src[9]=0xe8;
+	ipv6hdr.src[10]=0xec;
+	ipv6hdr.src[11]=0xd5;
+	ipv6hdr.src[12]=0x1b;
+	ipv6hdr.src[13]=0x7f;
+	ipv6hdr.src[14]=0x83;
+	ipv6hdr.src[15]=0x27;
+
+	ipv6hdr.dst[0]=0xff;
+	ipv6hdr.dst[1]=0x02;
+	ipv6hdr.dst[2]=ipv6hdr.dst[3]=ipv6hdr.dst[4]=ipv6hdr.dst[5]=ipv6hdr.dst[6]=ipv6hdr.dst[7]=ipv6hdr.dst[8]=ipv6hdr.dst[9]=ipv6hdr.dst[10]=ipv6hdr.dst[11]=ipv6hdr.dst[12]=ipv6hdr.dst[13]=ipv6hdr.dst[14]=0x00;
+	ipv6hdr.dst[15]=0x01;
+
+	icmpv6hdr_t icmpv6hdr;
+	icmpv6hdr.type=0x80;
+	icmpv6hdr.code=0x00;
+	icmpv6hdr.checksum=0x00;
+	icmpv6hdr.offset=0x00;
+
+	ph_t ph;
+	memcpy(ph.src,ipv6hdr.src,16);
+	memcpy(ph.dst,ipv6hdr.dst,16);
+	ph.icmpv6len = htonl(ICMPV6HDR_LEN);
+	ph.last = htonl(58);
+	memcpy(ph.icmpv6hdr,&icmpv6hdr,sizeof(icmpv6hdr_t));
+
+	uint16_t chsum=cs((uint16_t *)&ph,sizeof(ph_t));
+	printf("%d\n", sizeof(ph_t));
+	icmpv6hdr.checksum=chsum;
+
+	uint8_t* ether_frame= (uint8_t*) malloc(62);
+	memcpy(ether_frame,&ethhdr,sizeof(struct ether_header));
+	memcpy(ether_frame+ETHHDR_LEN,&ipv6hdr,sizeof(ipv6hdr_t));
+	memcpy(ether_frame+ETHHDR_LEN+sizeof(ipv6hdr_t),&icmpv6hdr,sizeof(icmpv6hdr_t));
+	//memcpy(ether_frame+ETHHDR_LEN,&arphdr,ARPHDR_LEN*sizeof(uint8_t));
+
+
+	return ether_frame;
+}
+
+
+
+void ipv6_scan(pcap_t* ifHandle,mac_t ifmac){
+
+	uint8_t* pkt = icmpv6_pkt_build(ifmac);
+	int bytes_wr=pcap_inject(ifHandle,pkt,ICMPV6PKT_LEN);
+	//printf("%d\n", bytes_wr);
+}
+
 int main(int argc, char* argv[]){
 
 	clargs_t clargs;
@@ -319,9 +446,10 @@ int main(int argc, char* argv[]){
 
 	pcap_activate(clargs.ifHandle);
 
-	ipv4_scan(netw,mask,clargs.ifmac,clargs.ifip4,clargs.ifHandle);
-	sleep(5);
-	pcap_dispatch(clargs.ifHandle,0,my_callback,NULL);
+	//ipv4_scan(netw,mask,clargs.ifmac,clargs.ifip4,clargs.ifHandle);
+	ipv6_scan(clargs.ifHandle,clargs.ifmac);
+	//sleep(5);
+	//pcap_dispatch(clargs.ifHandle,0,my_callback,NULL);
 	
 	pcap_close(clargs.ifHandle);
 	return 0;
