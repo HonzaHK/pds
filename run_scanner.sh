@@ -1,4 +1,4 @@
-SOURCE="pds-scanner.cpp"
+SOURCE="pds-scanner.cpp pds_addr.cpp pds_pkt.cpp"
 EXECUTABLE="pds-scanner"
 FLAGS="-std=c++11 -Wall -Wextra -pedantic"
 OUTFILE="detected-devices.xml"

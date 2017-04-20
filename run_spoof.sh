@@ -1,4 +1,4 @@
-SOURCE="pds-spoof.cpp"
+SOURCE="pds-spoof.cpp pds_addr.cpp pds_pkt.cpp"
 EXECUTABLE="pds-spoof"
 FLAGS="-std=c++11 -Wall -Wextra -pedantic"
 LIB_PCAP="-lpcap"
@@ -7,7 +7,7 @@ INTERFACE="wlp3s0"
 SPOOF_INTERVAL_MS="1000"
 PROTOCOL="arp"
 
-IP_LIBRA="192.168.0.17"
+IP_LIBRA="192.168.0.249"
 MAC_LIBRA="0019.d2c1.93ab"
 
 IP2="192.168.111.111"
