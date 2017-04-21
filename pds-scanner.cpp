@@ -5,6 +5,9 @@
 #include "pds_addr.h"
 #include "pds_pkt.h"
 
+#define HOST_MAX_IPV4_CNT 10 //maximum addresses assigned to one MAC
+#define HOST_MAX_IPV6_CNT 10 //maximum addresses assigned to one MAC
+
 typedef struct {
 	char* ifName;
 	char* fileName;
@@ -12,7 +15,10 @@ typedef struct {
 	
 typedef struct host {
 	u_char mac[6];
-	ipv4_t ipv4;
+	ipv4_t ipv4[HOST_MAX_IPV4_CNT];
+	int cnt_ipv4;
+	ipv6_t ipv6[HOST_MAX_IPV6_CNT];
+	int cnt_ipv6;
 } host_t;
 
 host_t hosts[64];
@@ -42,9 +48,14 @@ int parseArgs(int argc, char* argv[], clargs_t *clargs){
 void hosts_print(host_t* hosts, int host_cnt){
 	printf("<devices>\n");
 	for(int i=0;i<host_cnt;i++){
-		host_t tmp = hosts[i];
-		printf("\t<host mac=\"");mac_print(tmp.mac);printf("\">\n");
-		printf("\t\t<ipv4>");ipv4_print(tmp.ipv4);printf("</ipv4>\n");
+		host_t h_tmp = hosts[i];
+		printf("\t<host mac=\"");mac_print(h_tmp.mac);printf("\">\n");
+		for(int j=0;j<h_tmp.cnt_ipv4;j++){
+			printf("\t\t<ipv4>");ipv4_print(h_tmp.ipv4[j]);printf("</ipv4>\n");
+		}
+		for(int j=0;j<h_tmp.cnt_ipv6;j++){
+			printf("\t\t<ipv6>");ipv6_print(h_tmp.ipv6[j]);printf("</ipv6>\n");
+		}
 		printf("\t</host>\n");
 	}
 	printf("</devices>\n");
@@ -68,16 +79,18 @@ host_t* host_lookup(host_t* hosts, int host_cnt, u_char mac[6]){
 void my_callback(u_char *params,const struct pcap_pkthdr* pkthdr,const u_char* pkt){
 	UNUSED(params);UNUSED(pkthdr);
 
-	arphdr_t* arphdr = (arphdr_t*)(pkt+14);
-
-	if (ntohs(arphdr->htype) == 1 && ntohs(arphdr->ptype) == 0x0800){ 
-		printf("------------------------------------\n");
-		bool is_hosts_modified = false;
-
+	bool is_hosts_modified = false;
+	
+	ethhdr_t* ethhdr = (ethhdr_t*) pkt;
+	arphdr_t* arphdr = (arphdr_t*)(pkt+HDR_ETH_LEN);
+	ipv6hdr_t* ipv6hdr = (ipv6hdr_t*)(pkt+HDR_ETH_LEN);
+	if (ntohs(arphdr->htype)==1 && ntohs(arphdr->ptype)==0x0800){
+		printf("arp---------------------------------\n");
 		host_t *h_src = host_lookup(hosts,host_cnt,arphdr->src_mac);
 		if(h_src==NULL){ //process new host
-			memcpy(hosts[host_cnt].mac,arphdr->src_mac,sizeof(arphdr->src_mac));
-			memcpy(hosts[host_cnt].ipv4,arphdr->src_ip,sizeof(arphdr->src_ip));
+			memcpy(hosts[host_cnt].mac,arphdr->src_mac,MAC_LEN);
+			memcpy(hosts[host_cnt].ipv4[0],arphdr->src_ip,IP4_LEN);
+			hosts[host_cnt].cnt_ipv4++;
 			host_cnt++;
 			is_hosts_modified = true;
 		}
@@ -85,9 +98,24 @@ void my_callback(u_char *params,const struct pcap_pkthdr* pkthdr,const u_char* p
 
 		}
 
-		if(is_hosts_modified){
-			hosts_print(hosts,host_cnt);
+	}
+	else if (ipv6hdr->nexthdr==0x3a){
+		printf("icmpv6------------------------------\n");
+		host_t *h_src = host_lookup(hosts,host_cnt,ethhdr->src_mac);
+		if(h_src==NULL){ //process new host
+			memcpy(hosts[host_cnt].mac,ethhdr->src_mac,MAC_LEN);
+			memcpy(hosts[host_cnt].ipv6[0],ipv6hdr->src_ip,IP6_LEN);
+			hosts[host_cnt].cnt_ipv6++;
+			host_cnt++;
+			is_hosts_modified = true;
 		}
+		else{ //process known host
+
+		}
+	}
+	
+	if(is_hosts_modified){
+		hosts_print(hosts,host_cnt);
 	}
 }
 
@@ -124,7 +152,7 @@ void ipv4_scan(in_addr netw, in_addr mask, mac_t src_mac, ipv4_t src_ip, pcap_t*
 		uint8_t* pkt = arp_pkt_build(src_ip, *((ipv4_t*)&tmp.s_addr), src_mac, ipv4_mac_bcast, ARP_OP_REQUEST);
 		int bytes_written = pcap_inject(ifHandle, pkt, PKT_ARP_LEN);	
 		//printf("%d< ",bytes_written );
-		pcap_dispatch(ifHandle,0,my_callback,NULL);
+		//pcap_dispatch(ifHandle,0,my_callback,NULL);
 		//usleep(50000);
 		//free(pkt);
 	}
@@ -172,7 +200,7 @@ int main(int argc, char* argv[]){
 	pcap_activate(iface.handle);
 	ipv4_scan(netw,mask,iface.mac,iface.ipv4,iface.handle);
 	ipv6_scan(iface.handle,iface.mac,iface.ipv6);
-	sleep(3);
+	sleep(5);
 	pcap_dispatch(iface.handle,0,my_callback,NULL);
 	
 	pcap_close(iface.handle);

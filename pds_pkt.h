@@ -2,7 +2,6 @@
 //Author: Jan Kubis / xkubis13
 #ifndef PDS_PKT_H
 #define PDS_PKT_H
-#include <net/ethernet.h>
 
 #include "pds_addr.h"
 
@@ -14,6 +13,15 @@
 
 #define PKT_ARP_LEN HDR_ETH_LEN + HDR_ARP_LEN
 #define PKT_ICMPV6_LEN HDR_ETH_LEN + HDR_IPV6_LEN + HDR_ICMPV6_LEN
+
+
+// ARP --------------------------------------------------
+typedef struct {
+	mac_t dst_mac;
+	mac_t src_mac;
+	uint16_t type;
+} ethhdr_t;
+//-------------------------------------------------------
 
 // ARP --------------------------------------------------
 #define ARP_OP_REQUEST 1

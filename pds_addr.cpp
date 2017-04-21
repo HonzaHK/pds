@@ -3,7 +3,7 @@
 #include "pds_addr.h"
 
 void mac_print(mac_t mac){
-	printf("%02X:%02X:%02X:%02X:%02X:%02X", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+	printf("%02x%02x.%02x%02x.%02x%02x", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 }
 
 void ipv4_print(ipv4_t ip){
@@ -11,7 +11,7 @@ void ipv4_print(ipv4_t ip){
 }
 
 void ipv6_print(ipv6_t ip){
-	printf("%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X:%02X%02X"
+	printf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x"
 			,ip[0],ip[1],ip[2],ip[3],ip[4],ip[5],ip[6],ip[7],ip[8],ip[9],ip[10],ip[11],ip[12],ip[13],ip[14],ip[15]);
 }
 

@@ -17,10 +17,10 @@ void arp_print(arphdr_t *arpheader){
 
 uint8_t* arp_pkt_build(ipv4_t src_ip, ipv4_t dst_ip, mac_t src_mac, mac_t dst_mac, uint16_t oper){
 	
-	struct ether_header ethhdr;
-	memcpy(ethhdr.ether_dhost, dst_mac, MAC_LEN);
-	memcpy(ethhdr.ether_shost, src_mac, MAC_LEN);
-	ethhdr.ether_type = htons(0x0806);
+	ethhdr_t ethhdr;
+	memcpy(ethhdr.dst_mac, dst_mac, MAC_LEN);
+	memcpy(ethhdr.src_mac, src_mac, MAC_LEN);
+	ethhdr.type = htons(0x0806);
 	
 	arphdr_t arphdr;
 	arphdr.htype = htons(1);
@@ -66,7 +66,7 @@ uint16_t icmpv6_checksum(uint16_t *checksum_data, int len){
 }
 
 uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6){
-	struct ether_header ethhdr;
+	ethhdr_t ethhdr;
 
 	mac_t ipv6_mac_mcast;
 	ipv6_mac_mcast[0] = 0x33;
@@ -82,9 +82,9 @@ uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6){
 	ipv6_ip_mcast[2]=ipv6_ip_mcast[3]=ipv6_ip_mcast[4]=ipv6_ip_mcast[5]=ipv6_ip_mcast[6]=ipv6_ip_mcast[7]=ipv6_ip_mcast[8]=ipv6_ip_mcast[9]=ipv6_ip_mcast[10]=ipv6_ip_mcast[11]=ipv6_ip_mcast[12]=ipv6_ip_mcast[13]=ipv6_ip_mcast[14]=0x00;
 	ipv6_ip_mcast[15]=0x01;
 
-	memcpy(ethhdr.ether_dhost, &ipv6_mac_mcast, MAC_LEN);
-	memcpy(ethhdr.ether_shost, ifmac, MAC_LEN);
-	ethhdr.ether_type = htons(0x86dd);
+	memcpy(ethhdr.dst_mac, &ipv6_mac_mcast, MAC_LEN);
+	memcpy(ethhdr.src_mac, ifmac, MAC_LEN);
+	ethhdr.type = htons(0x86dd);
 
 	ipv6hdr_t ipv6hdr;
 	ipv6hdr.first= (6<<4);
@@ -111,7 +111,7 @@ uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6){
 	icmpv6hdr.checksum=icmpv6_checksum((uint16_t *)&csd,sizeof(chksumdata_t));
 
 	uint8_t* ether_frame= (uint8_t*) malloc(PKT_ICMPV6_LEN);
-	memcpy(ether_frame,&ethhdr,sizeof(struct ether_header));
+	memcpy(ether_frame,&ethhdr,sizeof(ethhdr_t));
 	memcpy(ether_frame+HDR_ETH_LEN,&ipv6hdr,sizeof(ipv6hdr_t));
 	memcpy(ether_frame+HDR_ETH_LEN+HDR_IPV6_LEN,&icmpv6hdr,sizeof(icmpv6hdr_t));
 
