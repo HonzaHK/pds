@@ -21,8 +21,7 @@ void ipv6_print(ipv6_t ip){
 }
 // ADDR CONVERSION -------------------------------------
 void ptomact(char* str, mac_t mac){
-	//(uint32_t*) for due to sscanf format, its still okay - numbers are small and can be saved in uint8_t
-	sscanf(str, "%02x%02x.%02x%02x.%02x%02x", (uint32_t*)&mac[0], (uint32_t*)&mac[1], (uint32_t*)&mac[2], (uint32_t*)&mac[3], (uint32_t*)&mac[4], (uint32_t*)&mac[5]);
+	sscanf(str, "%02hhx%02hhx.%02hhx%02hhx.%02hhx%02hhx",&mac[0],&mac[1],&mac[2],&mac[3],&mac[4],&mac[5]);
 }
 
 void ptoipv4t(char* str, ipv4_t ip){
@@ -38,7 +37,7 @@ void ptoipv6t(char* str, ipv6_t ip){
 }
 
 void macttop(mac_t mac, char str[MAC_ADDRSTRLEN]){
-	sprintf(str,"%02x%02x.%02x%02x.%02x%02x", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+	sprintf(str,"%02hhx%02hhx.%02hhx%02hhx.%02hhx%02hhx", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
 }
 
 void ipv4ttop(ipv4_t ip, char str[INET_ADDRSTRLEN]){

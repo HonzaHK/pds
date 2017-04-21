@@ -23,10 +23,10 @@ host_t* host_lookup(host_t* hosts, int host_cnt, mac_t mac){
 	host_t* h = NULL;
 
 	for(int i=0;i<host_cnt;i++){
-		host_t tmp = hosts[i];
+		host_t* tmp = &hosts[i];
 
-		if(memcmp(tmp.mac, mac, 6)==0){
-			h=&tmp;
+		if(memcmp(tmp->mac, mac, 6)==0){
+			h=tmp;
 			break;
 		}
 	}

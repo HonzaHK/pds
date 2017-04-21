@@ -73,6 +73,7 @@ int main(int argc, char* argv[]){
 		curr_pos+=bytes_read; //move pointer by chars read out
 	}
 	//todo: check pairs here (out of index, reflexive relation etc)
+
 	for(int i=0;i<pair_cnt;i++){
 		int a = pairs[i][0];
 		int b = pairs[i][1];

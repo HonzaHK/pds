@@ -44,7 +44,7 @@ void my_callback(u_char *params,const struct pcap_pkthdr* pkthdr,const u_char* p
 	arphdr_t* arphdr = (arphdr_t*)(pkt+HDR_ETH_LEN);
 	ipv6hdr_t* ipv6hdr = (ipv6hdr_t*)(pkt+HDR_ETH_LEN);
 	if (ntohs(arphdr->htype)==1 && ntohs(arphdr->ptype)==0x0800){
-		printf("arp---------------------------------\n");
+		//printf("arp---------------------------------\n");
 		host_t *h_src = host_lookup(hosts,host_cnt,arphdr->src_mac);
 		if(h_src==NULL){ //process new host
 			memcpy(hosts[host_cnt].mac,arphdr->src_mac,MAC_LEN);
@@ -54,12 +54,14 @@ void my_callback(u_char *params,const struct pcap_pkthdr* pkthdr,const u_char* p
 			is_hosts_modified = true;
 		}
 		else{ //process known host
-
+			memcpy(h_src->ipv4[h_src->cnt_ipv4],arphdr->src_ip,IP4_LEN);
+			h_src->cnt_ipv4++;
+			is_hosts_modified = true;
 		}
 
 	}
 	else if (ipv6hdr->nexthdr==0x3a){
-		printf("icmpv6------------------------------\n");
+		//printf("icmpv6------------------------------\n");
 		host_t *h_src = host_lookup(hosts,host_cnt,ethhdr->src_mac);
 		if(h_src==NULL){ //process new host
 			memcpy(hosts[host_cnt].mac,ethhdr->src_mac,MAC_LEN);
@@ -69,12 +71,14 @@ void my_callback(u_char *params,const struct pcap_pkthdr* pkthdr,const u_char* p
 			is_hosts_modified = true;
 		}
 		else{ //process known host
-
+			memcpy(h_src->ipv6[h_src->cnt_ipv6],ipv6hdr->src_ip,IP6_LEN);
+			h_src->cnt_ipv6++;
+			is_hosts_modified = true;
 		}
 	}
 	
 	if(is_hosts_modified){
-		hosts_print(hosts,host_cnt);
+		//hosts_print(hosts,host_cnt);
 	}
 }
 
@@ -95,9 +99,6 @@ void ipv4_scan(in_addr netw, in_addr mask, mac_t src_mac, ipv4_t src_ip, pcap_t*
 	strcpy(mask_str, inet_ntoa(mask));
 	if (mask_str == NULL){ perror("inet_ntoa"); return; }
 
-	printf("netw: %s\n", netw_str);
-	printf("mask: %s\n", mask_str);
-
 	in_addr mask_full;
 	inet_aton("255.255.255.255",&(mask_full));
 	int devcnt = ntohl(mask_full.s_addr-mask.s_addr);
@@ -115,9 +116,6 @@ void ipv4_scan(in_addr netw, in_addr mask, mac_t src_mac, ipv4_t src_ip, pcap_t*
 		//usleep(50000);
 		//free(pkt);
 	}
-	printf("\n");
-	
-
 	return;
 }
 
@@ -125,6 +123,9 @@ int main(int argc, char* argv[]){
 
 	clargs_t clargs;
 	iface_t iface;
+	for(int i=0;i<HOST_MAX_CNT;i++){
+	hosts[i].cnt_ipv6=0;
+}
 
 	if(parseArgs(argc,argv,&clargs)!=0){
 		return 0;
