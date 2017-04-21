@@ -4,24 +4,14 @@
 
 #include "pds_addr.h"
 #include "pds_pkt.h"
-
-#define HOST_MAX_IPV4_CNT 10 //maximum addresses assigned to one MAC
-#define HOST_MAX_IPV6_CNT 10 //maximum addresses assigned to one MAC
+#include "pds_host.h"
 
 typedef struct {
 	char* ifName;
 	char* fileName;
 } clargs_t;
-	
-typedef struct host {
-	u_char mac[6];
-	ipv4_t ipv4[HOST_MAX_IPV4_CNT];
-	int cnt_ipv4;
-	ipv6_t ipv6[HOST_MAX_IPV6_CNT];
-	int cnt_ipv6;
-} host_t;
 
-host_t hosts[64];
+host_t hosts[HOST_MAX_CNT];
 int host_cnt=0;
 
 int parseArgs(int argc, char* argv[], clargs_t *clargs){
@@ -43,37 +33,6 @@ int parseArgs(int argc, char* argv[], clargs_t *clargs){
 	}
 
 	return 0;
-}
-
-void hosts_print(host_t* hosts, int host_cnt){
-	printf("<devices>\n");
-	for(int i=0;i<host_cnt;i++){
-		host_t h_tmp = hosts[i];
-		printf("\t<host mac=\"");mac_print(h_tmp.mac);printf("\">\n");
-		for(int j=0;j<h_tmp.cnt_ipv4;j++){
-			printf("\t\t<ipv4>");ipv4_print(h_tmp.ipv4[j]);printf("</ipv4>\n");
-		}
-		for(int j=0;j<h_tmp.cnt_ipv6;j++){
-			printf("\t\t<ipv6>");ipv6_print(h_tmp.ipv6[j]);printf("</ipv6>\n");
-		}
-		printf("\t</host>\n");
-	}
-	printf("</devices>\n");
-}
-
-host_t* host_lookup(host_t* hosts, int host_cnt, u_char mac[6]){
-	host_t* h = NULL;
-
-	for(int i=0;i<host_cnt;i++){
-		host_t tmp = hosts[i];
-
-		if(memcmp(tmp.mac, mac, 6)==0){
-			h=&tmp;
-			break;
-		}
-	}
-
-	return h;
 }
 
 void my_callback(u_char *params,const struct pcap_pkthdr* pkthdr,const u_char* pkt){

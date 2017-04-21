@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <pcap.h>
+#include <arpa/inet.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>
@@ -17,6 +18,8 @@
 #include <ifaddrs.h>
 
 #define UNUSED(x) (void)(x) //suppress w-unused-parameter warnings
+
+#define MAC_ADDRSTRLEN 15//mac string length
 
 #define MAC_LEN 6
 #define IP4_LEN 4
@@ -29,6 +32,13 @@ typedef uint8_t ipv6_t[IP6_LEN];
 void mac_print(mac_t mac);
 void ipv4_print(ipv4_t ip);
 void ipv6_print(ipv6_t ip);
+
+void ptomact(char* str, mac_t mac);
+void ptoipv4t(char* str, ipv4_t ip);
+void ptoipv6t(char* str, ipv6_t ip);
+void macttop(mac_t mac, char str[MAC_ADDRSTRLEN]);
+void ipv4ttop(ipv4_t ip, char str[INET_ADDRSTRLEN]);
+void ipv6ttop(ipv6_t ip, char str[INET6_ADDRSTRLEN]);
 
 void getifmac(char* ifName, mac_t ifmac);
 void getifipv4(char* ifName, ipv4_t ifip4);

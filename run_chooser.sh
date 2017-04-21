@@ -1,4 +1,4 @@
-SOURCE="pds-chooser.cpp"
+SOURCE="pds-chooser.cpp pds_addr.cpp pds_host.cpp"
 EXECUTABLE="pds-chooser"
 FLAGS="-std=c++11 -Wall -Wextra -pedantic"
 INFILE="chooser_in.xml"

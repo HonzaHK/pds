@@ -3,17 +3,70 @@
 #include "pds_addr.h"
 
 void mac_print(mac_t mac){
-	printf("%02x%02x.%02x%02x.%02x%02x", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+	char str[MAC_ADDRSTRLEN];
+	macttop(mac,str);
+	printf("%s",str);
 }
 
 void ipv4_print(ipv4_t ip){
-	printf("%d.%d.%d.%d", ip[0],ip[1],ip[2],ip[3]);
+	char str[INET_ADDRSTRLEN];
+	ipv4ttop(ip,str);
+	printf("%s",str);
 }
 
 void ipv6_print(ipv6_t ip){
-	printf("%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x"
-			,ip[0],ip[1],ip[2],ip[3],ip[4],ip[5],ip[6],ip[7],ip[8],ip[9],ip[10],ip[11],ip[12],ip[13],ip[14],ip[15]);
+	char str[INET6_ADDRSTRLEN];
+	ipv6ttop(ip,str);
+	printf("%s",str);
 }
+// ADDR CONVERSION -------------------------------------
+void ptomact(char* str, mac_t mac){
+	//(uint32_t*) for due to sscanf format, its still okay - numbers are small and can be saved in uint8_t
+	sscanf(str, "%02x%02x.%02x%02x.%02x%02x", (uint32_t*)&mac[0], (uint32_t*)&mac[1], (uint32_t*)&mac[2], (uint32_t*)&mac[3], (uint32_t*)&mac[4], (uint32_t*)&mac[5]);
+}
+
+void ptoipv4t(char* str, ipv4_t ip){
+	struct sockaddr_in sa;
+	inet_pton(AF_INET,str,&(sa.sin_addr));
+	memcpy(ip,&(sa.sin_addr),sizeof(sa.sin_addr));
+}
+
+void ptoipv6t(char* str, ipv6_t ip){
+	struct sockaddr_in6 sa;
+	inet_pton(AF_INET6,str,&(sa.sin6_addr));
+	memcpy(ip,&(sa.sin6_addr),sizeof(sa.sin6_addr));
+}
+
+void macttop(mac_t mac, char str[MAC_ADDRSTRLEN]){
+	sprintf(str,"%02x%02x.%02x%02x.%02x%02x", mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]);
+}
+
+void ipv4ttop(ipv4_t ip, char str[INET_ADDRSTRLEN]){
+	struct sockaddr_in sa;
+	memcpy(&(sa.sin_addr),ip,sizeof(sa.sin_addr));
+	inet_ntop(AF_INET,&(sa.sin_addr),str,INET_ADDRSTRLEN);
+}
+
+void ipv6ttop(ipv6_t ip, char str[INET6_ADDRSTRLEN]){
+	struct sockaddr_in6 sa;
+	memcpy(&(sa.sin6_addr),ip,sizeof(sa.sin6_addr));
+	inet_ntop(AF_INET6,&(sa.sin6_addr),str,INET6_ADDRSTRLEN);
+}
+//------------------------------------------------------
+
+
+
+// void ptoipv4t(char* str, ipv4_t ip){
+// 	struct sockaddr_in sa;
+// 	inet_pton(AF_INET,str,&(sa.sin_addr));
+// 	memcpy(ip,&(sa.sin_addr),sizeof(sa.sin_addr));
+// }
+
+// void ptoipv6t(char* str, ipv6_t ip){
+// 	struct sockaddr_in6 sa;
+// 	inet_pton(AF_INET6,str,&(sa.sin6_addr));
+// 	memcpy(ip,&(sa.sin6_addr),sizeof(sa.sin6_addr));
+// }
 
 
 void getifmac(char* ifName, mac_t ifmac) {
@@ -50,7 +103,6 @@ void getifipv4(char* ifName, ipv4_t ifip4) {
 
 void getifipv6(char *ifName, ipv6_t ifip6){
 	struct ifaddrs *ifa, *ifa_tmp;
-	char addr[50];
 
 	if (getifaddrs(&ifa) == -1) {
 		perror("getifaddrs failed");
