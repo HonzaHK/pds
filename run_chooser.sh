@@ -1,8 +1,8 @@
 SOURCE="pds-chooser.cpp"
 EXECUTABLE="pds-chooser"
 FLAGS="-std=c++11 -Wall -Wextra -pedantic"
-INFILE="detected-devices.xml"
-OUTFILE="pair-devices.xml"
+INFILE="chooser_in.xml"
+OUTFILE="chooser_out.xml"
 LIB_XML="-I/usr/include/libxml2 -lxml2"
 
 if [ -f $EXECUTABLE ]; then
@@ -11,9 +11,6 @@ fi
 if [ -f $OUTFILE ]; then
 	sudo rm $OUTFILE
 fi
-# if [ ! -f $INFILE ]; then
-# 	exit
-# fi
 
 
 echo "-- COMPILATION ----------------------------------------"

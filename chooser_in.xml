@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<devices>
+   <host mac="1002.b528.a79e">
+      <ipv4>192.168.1.23</ipv4>
+      <ipv6>2001:db8:cafe:e111::23</ipv6>
+      <ipv6>fe80::1234:5678:00ab:cdef</ipv6>
+   </host>
+   <host mac="c37d.2bc9.4f70">
+      <ipv4>192.168.1.152</ipv4>
+   </host>
+   <host mac="0112.ae99.e286">
+      <ipv4>192.168.1.1</ipv4>
+      <ipv6>2001:db8:cafe:e111::1</ipv6>
+      <ipv6>fe80::1</ipv6>
+   </host>
+</devices>
