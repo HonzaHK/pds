@@ -20,3 +20,6 @@ echo "-------------------------------------------------------"
 if [ -f $EXECUTABLE ]; then
 sudo ./$EXECUTABLE -i $INTERFACE -f $OUTFILE
 fi
+if [ -f $OUTFILE ]; then
+cat $OUTFILE
+fi

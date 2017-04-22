@@ -83,7 +83,7 @@ int main(int argc, char* argv[]){
 		hosts[b].pair_id = i;
 	}
 
-	hosts_print(hosts,host_cnt);
+	hostsToXml(hosts,host_cnt,clargs.outfile);
 
 	return 0;
 }

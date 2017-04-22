@@ -34,6 +34,61 @@ host_t* host_lookup(host_t* hosts, int host_cnt, mac_t mac){
 	return h;
 }
 
+host_t* host_add(host_t hosts[HOST_MAX_CNT], int index, mac_t mac){
+	host_t* h = &hosts[index];
+	memcpy(h->mac,mac,MAC_LEN);
+	
+	return h;
+}
+
+void host_add_ipv4(host_t* h, ipv4_t ip){
+	for(int i=0;i<h->cnt_ipv4;i++){
+		if(memcmp(h->ipv4[i],ip,IP4_LEN)==0){return;} //ip already stored
+	}
+	memcpy(h->ipv4[h->cnt_ipv4],ip,IP4_LEN);
+	h->cnt_ipv4++;
+}
+
+void host_add_ipv6(host_t* h, ipv6_t ip){
+	for(int i=0;i<h->cnt_ipv6;i++){
+		if(memcmp(h->ipv6[i],ip,IP6_LEN)==0){return;} //ip already stored
+	}
+	memcpy(h->ipv6[h->cnt_ipv6],ip,IP6_LEN);
+	h->cnt_ipv6++;
+}
+
+void hostsToXml(host_t hosts[HOST_MAX_CNT], int host_cnt, char* filename){
+	
+	FILE* fd;
+	if((fd = fopen(filename,"w"))==NULL){
+		return;
+	}
+
+	char str_mac[MAC_ADDRSTRLEN];
+	char str_ip4[INET_ADDRSTRLEN];
+	char str_ip6[INET6_ADDRSTRLEN];
+
+	fprintf(fd,"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+	fprintf(fd,"<devices>\n");
+	for(int i=0;i<host_cnt;i++){
+		host_t h_tmp = hosts[i];
+		macttop(h_tmp.mac,str_mac);
+		fprintf(fd,"\t<host mac=\"");fprintf(fd, "%s",str_mac);if(h_tmp.is_paired){fprintf(fd," group=\"victim-pair-%d\"", h_tmp.pair_id);}fprintf(fd,"\">\n");
+		for(int j=0;j<h_tmp.cnt_ipv4;j++){
+			ipv4ttop(h_tmp.ipv4[j],str_ip4);
+			fprintf(fd,"\t\t<ipv4>");fprintf(fd, "%s",str_ip4);fprintf(fd,"</ipv4>\n");
+		}
+		for(int j=0;j<h_tmp.cnt_ipv6;j++){
+			ipv6ttop(h_tmp.ipv6[j],str_ip6);
+			fprintf(fd,"\t\t<ipv6>");fprintf(fd, "%s",str_ip6);fprintf(fd,"</ipv6>\n");
+		}
+		fprintf(fd,"\t</host>\n");
+	}
+	fprintf(fd,"</devices>\n");
+
+	fclose(fd);
+}
+
 void xmlToHosts(const char* filename, host_t hosts[HOST_MAX_CNT],int* host_cnt){
 	LIBXML_TEST_VERSION
 	xmlDoc* doc = xmlReadFile(filename,NULL,0);

@@ -37,48 +37,29 @@ int parseArgs(int argc, char* argv[], clargs_t *clargs){
 
 void my_callback(u_char *params,const struct pcap_pkthdr* pkthdr,const u_char* pkt){
 	UNUSED(params);UNUSED(pkthdr);
-
-	bool is_hosts_modified = false;
 	
 	ethhdr_t* ethhdr = (ethhdr_t*) pkt;
 	arphdr_t* arphdr = (arphdr_t*)(pkt+HDR_ETH_LEN);
 	ipv6hdr_t* ipv6hdr = (ipv6hdr_t*)(pkt+HDR_ETH_LEN);
 	if (ntohs(arphdr->htype)==1 && ntohs(arphdr->ptype)==0x0800){
 		//printf("arp---------------------------------\n");
-		host_t *h_src = host_lookup(hosts,host_cnt,arphdr->src_mac);
-		if(h_src==NULL){ //process new host
-			memcpy(hosts[host_cnt].mac,arphdr->src_mac,MAC_LEN);
-			memcpy(hosts[host_cnt].ipv4[0],arphdr->src_ip,IP4_LEN);
-			hosts[host_cnt].cnt_ipv4++;
+		host_t *h = host_lookup(hosts,host_cnt,arphdr->src_mac);
+		if(h==NULL){ //add new host
+			h = host_add(hosts,host_cnt,arphdr->src_mac);
 			host_cnt++;
-			is_hosts_modified = true;
 		}
-		else{ //process known host
-			memcpy(h_src->ipv4[h_src->cnt_ipv4],arphdr->src_ip,IP4_LEN);
-			h_src->cnt_ipv4++;
-			is_hosts_modified = true;
-		}
+		host_add_ipv4(h,arphdr->src_ip);
 
 	}
 	else if (ipv6hdr->nexthdr==0x3a){
 		//printf("icmpv6------------------------------\n");
-		host_t *h_src = host_lookup(hosts,host_cnt,ethhdr->src_mac);
-		if(h_src==NULL){ //process new host
-			memcpy(hosts[host_cnt].mac,ethhdr->src_mac,MAC_LEN);
-			memcpy(hosts[host_cnt].ipv6[0],ipv6hdr->src_ip,IP6_LEN);
-			hosts[host_cnt].cnt_ipv6++;
+		host_t *h = host_lookup(hosts,host_cnt,ethhdr->src_mac);
+		if(h==NULL){ //add new host
+			h = host_add(hosts,host_cnt,ethhdr->src_mac);
 			host_cnt++;
-			is_hosts_modified = true;
 		}
-		else{ //process known host
-			memcpy(h_src->ipv6[h_src->cnt_ipv6],ipv6hdr->src_ip,IP6_LEN);
-			h_src->cnt_ipv6++;
-			is_hosts_modified = true;
-		}
-	}
-	
-	if(is_hosts_modified){
-		hosts_print(hosts,host_cnt);
+		host_add_ipv6(h,ipv6hdr->src_ip);
+
 	}
 }
 
@@ -131,11 +112,6 @@ int main(int argc, char* argv[]){
 		return 0;
 	}
 
-	// if((clargs.filePtr = fopen(clargs.fileName,"w"))==NULL){
-	// 	fprintf(stderr,"fopen() failed\n");
-	// 	return 0;
-	// }
-	
 	char errbuf[PCAP_ERRBUF_SIZE];
 
 	if ((iface.handle=pcap_create(clargs.ifName,errbuf))==NULL) {
@@ -164,5 +140,7 @@ int main(int argc, char* argv[]){
 	pcap_dispatch(iface.handle,0,my_callback,NULL);
 	
 	pcap_close(iface.handle);
+	hostsToXml(hosts,host_cnt,clargs.fileName);
+
 	return 0;
 }
