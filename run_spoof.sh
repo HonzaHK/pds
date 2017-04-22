@@ -22,9 +22,9 @@ MAC_XPERIAT="1800.2d30.2d8f"
 #--------------------------------------------
 
 
-IP1=$IP6_LIBRA_UB
+IP1=$IP_LIBRA_UB
 MAC1=$MAC_LIBRA_UB
-IP2=$IP6_XPERIAT
+IP2=$IP_XPERIAT
 MAC2=$MAC_XPERIAT
 
 if [ -f $EXECUTABLE ]; then
@@ -36,5 +36,5 @@ g++ $FLAGS $SOURCE -o $EXECUTABLE $LIB_PCAP
 echo "-------------------------------------------------------"
 
 if [ -f $EXECUTABLE ]; then
-	sudo valgrind --leak-check=full ./$EXECUTABLE -i $INTERFACE -t $SPOOF_INTERVAL_MS -p $PROTOCOL -victim1ip $IP1 -victim1mac $MAC1 -victim2ip $IP2 -victim2mac $MAC2
+	sudo ./$EXECUTABLE -i $INTERFACE -t $SPOOF_INTERVAL_MS -p $PROTOCOL -victim1ip $IP1 -victim1mac $MAC1 -victim2ip $IP2 -victim2mac $MAC2
 fi

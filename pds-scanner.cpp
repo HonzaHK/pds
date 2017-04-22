@@ -1,6 +1,6 @@
 //VUTBR - FIT - PDS project MitM
 //Author: Jan Kubis / xkubis13
-#include <arpa/inet.h>
+#include <signal.h>
 
 #include "pds_addr.h"
 #include "pds_pkt.h"
@@ -13,6 +13,13 @@ typedef struct {
 
 host_t hosts[HOST_MAX_CNT];
 int host_cnt=0;
+
+volatile bool sigint_recv = false;
+void sigint_callback(int signo){
+	UNUSED(signo);
+	sigint_recv = true;
+	printf("SIGINT received, wait to finish..\n");
+}
 
 int parseArgs(int argc, char* argv[], clargs_t *clargs){
 
@@ -67,8 +74,7 @@ void ipv6_scan(pcap_t* ifHandle,mac_t ifmac, ipv6_t ifip6){
 
 	uint8_t pkt[PKT_ICMPV6_ECHOREQ_LEN];
 	icmpv6_pkt_echoreq_build(pkt,ifmac,ifip6);
-	int bytes_wr=pcap_inject(ifHandle,pkt,PKT_ICMPV6_ECHOREQ_LEN);
-	//printf("%d\n", bytes_wr);
+	pcap_inject(ifHandle,pkt,PKT_ICMPV6_ECHOREQ_LEN);
 }
 
 void ipv4_scan(in_addr netw, in_addr mask, mac_t src_mac, ipv4_t src_ip, pcap_t* ifHandle){
@@ -93,11 +99,10 @@ void ipv4_scan(in_addr netw, in_addr mask, mac_t src_mac, ipv4_t src_ip, pcap_t*
 		tmp.s_addr = htonl(ntohl(netw.s_addr) + (i+1));
 		uint8_t pkt[PKT_ARP_LEN];
 		arp_pkt_build(pkt,src_ip, *((ipv4_t*)&tmp.s_addr), src_mac, ipv4_mac_bcast, ARP_OP_REQUEST);
-		int bytes_written = pcap_inject(ifHandle, pkt, PKT_ARP_LEN);
-		//printf("%d< ",bytes_written );
-		//pcap_dispatch(ifHandle,0,my_callback,NULL);
-		//usleep(50000);
-		//free(pkt);
+		pcap_inject(ifHandle, pkt, PKT_ARP_LEN);
+		//if(i%200==0){pcap_dispatch(ifHandle,0,my_callback,NULL);} // collect every 200th ping to empty buffer
+		if(sigint_recv){break;}
+		//usleep(1000);
 	}
 	return;
 }
@@ -106,9 +111,7 @@ int main(int argc, char* argv[]){
 
 	clargs_t clargs;
 	iface_t iface;
-	for(int i=0;i<HOST_MAX_CNT;i++){
-	hosts[i].cnt_ipv6=0;
-}
+	signal(SIGINT, sigint_callback);
 
 	if(parseArgs(argc,argv,&clargs)!=0){
 		return 0;
@@ -130,14 +133,15 @@ int main(int argc, char* argv[]){
 		&mask.s_addr,
 		errbuf
 	);
-	if(lookup_return_code!=0){ printf("lookup err\n"); return 0;}
+	if(lookup_return_code!=0){ printf("Network / Mask lookup failed\n"); return 0;}
 
 	get_if_addrs(iface.name,&iface);
 
 	pcap_activate(iface.handle);
+	
 	ipv4_scan(netw,mask,iface.mac,iface.ipv4,iface.handle);
 	ipv6_scan(iface.handle,iface.mac,iface.ipv6);
-	sleep(5);
+	sleep(3);
 	pcap_dispatch(iface.handle,0,my_callback,NULL);
 	
 	pcap_close(iface.handle);
