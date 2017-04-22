@@ -16,7 +16,7 @@
 #define PKT_ICMPV6_ECHOREQ_LEN HDR_ETH_LEN + HDR_IPV6_LEN + HDR_ICMPV6_ECHOREQ_LEN
 #define PKT_ICMPV6_ADVERT_LEN HDR_ETH_LEN + HDR_IPV6_LEN + HDR_ICMPV6_ADVERT_LEN
 
-// ARP --------------------------------------------------
+// ETH --------------------------------------------------
 typedef struct {
 	mac_t dst_mac;
 	mac_t src_mac;
@@ -40,7 +40,7 @@ typedef struct {
 } arphdr_t;
 
 void arp_print(arphdr_t *arpheader);
-uint8_t* arp_pkt_build(ipv4_t src_ip, ipv4_t dst_ip, mac_t src_mac, mac_t dst_mac, uint16_t oper);
+void arp_pkt_build(uint8_t* pkt_frame, ipv4_t src_ip, ipv4_t dst_ip, mac_t src_mac, mac_t dst_mac, uint16_t oper);
 //-------------------------------------------------------
 
 
@@ -61,6 +61,7 @@ typedef struct {
 	uint8_t code;
 	uint16_t checksum;
 	uint32_t offset;
+	
 	ipv6_t target_addr_adv; //for advertisement only, 0x00 otherwise
 	uint8_t type_adv; //for advertisement only, 0x00 otherwise
 	uint8_t length; //for advertisement only, 0x00 otherwise
@@ -76,7 +77,7 @@ typedef struct { //structure for computing checksum
 } chksumdata_t;
 
 uint16_t icmpv6_checksum(uint16_t *checksum_data, int len);
-uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6);
+uint8_t* icmpv6_pkt_echoreq_build(uint8_t* pkt_frame, mac_t ifmac, ipv6_t ifip6);
 uint8_t* icmpv6_pkt_advert_build(mac_t src_mac, mac_t dst_mac, ipv6_t src_ip, ipv6_t dst_ip);
 //-------------------------------------------------------
 

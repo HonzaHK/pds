@@ -1,6 +1,6 @@
 SOURCE="pds-spoof.cpp pds_addr.cpp pds_pkt.cpp"
 EXECUTABLE="pds-spoof"
-FLAGS="-std=c++11 -Wall -Wextra -pedantic"
+FLAGS="-g -std=c++11 -Wall -Wextra -pedantic"
 LIB_PCAP="-lpcap"
 
 INTERFACE="wlp3s0"
@@ -32,5 +32,5 @@ g++ $FLAGS $SOURCE -o $EXECUTABLE $LIB_PCAP
 echo "-------------------------------------------------------"
 
 if [ -f $EXECUTABLE ]; then
-	sudo ./$EXECUTABLE -i $INTERFACE -t $SPOOF_INTERVAL_MS -p $PROTOCOL -victim1ip $IP1 -victim1mac $MAC1 -victim2ip $IP2 -victim2mac $MAC2
+	sudo valgrind --leak-check=full ./$EXECUTABLE -i $INTERFACE -t $SPOOF_INTERVAL_MS -p $PROTOCOL -victim1ip $IP1 -victim1mac $MAC1 -victim2ip $IP2 -victim2mac $MAC2
 fi

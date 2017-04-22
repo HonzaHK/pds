@@ -53,54 +53,8 @@ void ipv6ttop(ipv6_t ip, char str[INET6_ADDRSTRLEN]){
 }
 //------------------------------------------------------
 
-
-
-// void ptoipv4t(char* str, ipv4_t ip){
-// 	struct sockaddr_in sa;
-// 	inet_pton(AF_INET,str,&(sa.sin_addr));
-// 	memcpy(ip,&(sa.sin_addr),sizeof(sa.sin_addr));
-// }
-
-// void ptoipv6t(char* str, ipv6_t ip){
-// 	struct sockaddr_in6 sa;
-// 	inet_pton(AF_INET6,str,&(sa.sin6_addr));
-// 	memcpy(ip,&(sa.sin6_addr),sizeof(sa.sin6_addr));
-// }
-
-
-void getifmac(char* ifName, mac_t ifmac) {
-	struct ifreq ifr;
-	int sock=0;
-
-	sock=socket(AF_INET,SOCK_DGRAM,0);
-	strncpy( ifr.ifr_name, ifName, strlen(ifName) );
-	ifr.ifr_addr.sa_family = AF_INET;
-	if (ioctl( sock, SIOCGIFHWADDR, &ifr ) < 0) {
-		return;
-	}
-	close(sock);
-
-	memcpy(ifmac, ifr.ifr_hwaddr.sa_data, MAC_LEN);
-	return ;
-}
-
-void getifipv4(char* ifName, ipv4_t ifip4) {
-	struct ifreq ifr;
-	int sock = 0;
-
-	sock = socket(AF_INET, SOCK_DGRAM, 0);
-	strncpy(ifr.ifr_name, ifName, strlen(ifName));
-	ifr.ifr_addr.sa_family = AF_INET;
-	if (ioctl(sock, SIOCGIFADDR, &ifr) < 0) {
-		return;
-	}
-	close(sock);
-
-	memcpy(ifip4, &(((struct sockaddr_in *) &(ifr.ifr_addr))->sin_addr), IP4_LEN);
-	return ;
-}
-
-void getifipv6(char *ifName, ipv6_t ifip6){
+//gets iface mac && ipv4 && ipv6
+void get_if_addrs(char *ifName, iface_t* iface){
 	struct ifaddrs *ifa, *ifa_tmp;
 
 	if (getifaddrs(&ifa) == -1) {
@@ -108,21 +62,24 @@ void getifipv6(char *ifName, ipv6_t ifip6){
 		exit(1);
 	}
 
-	ifa_tmp = ifa;
-	while (ifa_tmp) {
+	for(ifa_tmp = ifa; ifa_tmp!=NULL; ifa_tmp = ifa_tmp->ifa_next){
+
+		if(strcmp(ifa_tmp->ifa_name,ifName)!=0){continue;} //another interface
 		if (ifa_tmp->ifa_addr){
-			if ( (ifa_tmp->ifa_addr->sa_family == AF_INET) || (ifa_tmp->ifa_addr->sa_family == AF_INET6) ) {
-				if (ifa_tmp->ifa_addr->sa_family == AF_INET) { // IPv4
-					struct sockaddr_in *in = (struct sockaddr_in*) ifa_tmp->ifa_addr;
-				}
-				else { // IPv6
-					struct sockaddr_in6 *in6 = (struct sockaddr_in6*) ifa_tmp->ifa_addr;
-					memcpy(ifip6, &in6->sin6_addr, IP6_LEN);
-				}
-				// printf("name = %s\n", ifa_tmp->ifa_name);
-				// printf("addr = %s\n", addr);
+			if (ifa_tmp->ifa_addr->sa_family == AF_PACKET){ // MAC
+				struct sockaddr_ll *ll = (struct sockaddr_ll*) ifa_tmp->ifa_addr;
+				memcpy(iface->mac, &ll->sll_addr, MAC_LEN);
+			}
+			else if (ifa_tmp->ifa_addr->sa_family == AF_INET){ // IPv4
+				struct sockaddr_in *in = (struct sockaddr_in*) ifa_tmp->ifa_addr;
+				memcpy(iface->ipv4, &in->sin_addr, IP4_LEN);
+			}
+			else if(ifa_tmp->ifa_addr->sa_family == AF_INET6){ // IPv6
+				struct sockaddr_in6 *in6 = (struct sockaddr_in6*) ifa_tmp->ifa_addr;
+				memcpy(iface->ipv6, &in6->sin6_addr, IP6_LEN);
 			}
 		}
-		ifa_tmp = ifa_tmp->ifa_next;
 	}
+
+	freeifaddrs(ifa);
 }

@@ -15,7 +15,7 @@ void arp_print(arphdr_t *arpheader){
 	return;
 }
 
-uint8_t* arp_pkt_build(ipv4_t src_ip, ipv4_t dst_ip, mac_t src_mac, mac_t dst_mac, uint16_t oper){
+void arp_pkt_build(uint8_t* pkt_frame,ipv4_t src_ip, ipv4_t dst_ip, mac_t src_mac, mac_t dst_mac, uint16_t oper){
 	
 	ethhdr_t ethhdr;
 	memcpy(ethhdr.dst_mac, dst_mac, MAC_LEN);
@@ -33,11 +33,8 @@ uint8_t* arp_pkt_build(ipv4_t src_ip, ipv4_t dst_ip, mac_t src_mac, mac_t dst_ma
 	memcpy(&arphdr.dst_mac, dst_mac, MAC_LEN); //when broadcast in eth_header (when doing scan), this is DONT_CARE
 	memcpy(&arphdr.dst_ip, dst_ip, IP4_LEN);
 
-	uint8_t* ether_frame= (uint8_t*) malloc(PKT_ARP_LEN);
-	memcpy(ether_frame,&ethhdr,HDR_ETH_LEN);
-	memcpy(ether_frame+HDR_ETH_LEN,&arphdr,HDR_ARP_LEN);
-
-	return ether_frame;
+	memcpy(pkt_frame,&ethhdr,HDR_ETH_LEN);
+	memcpy(pkt_frame+HDR_ETH_LEN,&arphdr,HDR_ARP_LEN);
 }
 //-------------------------------------------------------
 
@@ -109,7 +106,7 @@ uint8_t* icmpv6_pkt_advert_build(mac_t src_mac, mac_t dst_mac, ipv6_t src_ip, ip
 	return ether_frame;
 }
 
-uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6){
+uint8_t* icmpv6_pkt_echoreq_build(uint8_t* pkt_frame, mac_t ifmac, ipv6_t ifip6){
 	ethhdr_t ethhdr;
 
 	mac_t ipv6_mac_mcast;
@@ -159,11 +156,10 @@ uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6){
 
 	icmpv6hdr.checksum=icmpv6_checksum((uint16_t *)&csd,sizeof(chksumdata_t));
 
-	uint8_t* ether_frame= (uint8_t*) malloc(PKT_ICMPV6_ECHOREQ_LEN);
-	memcpy(ether_frame,&ethhdr,HDR_ETH_LEN);
-	memcpy(ether_frame+HDR_ETH_LEN,&ipv6hdr,HDR_IPV6_LEN);
-	memcpy(ether_frame+HDR_ETH_LEN+HDR_IPV6_LEN,&icmpv6hdr,HDR_ICMPV6_ECHOREQ_LEN);
+	memcpy(pkt_frame,&ethhdr,HDR_ETH_LEN);
+	memcpy(pkt_frame+HDR_ETH_LEN,&ipv6hdr,HDR_IPV6_LEN);
+	memcpy(pkt_frame+HDR_ETH_LEN+HDR_IPV6_LEN,&icmpv6hdr,HDR_ICMPV6_ECHOREQ_LEN);
 
-	return ether_frame;
+	return pkt_frame;
 }
 //-------------------------------------------------------

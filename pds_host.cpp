@@ -106,19 +106,23 @@ void xmlToHosts(const char* filename, host_t hosts[HOST_MAX_CNT],int* host_cnt){
 		if (host_node->type != XML_ELEMENT_NODE) { continue;}
 		host_t* h = &hosts[*host_cnt];
 		attr = host_node->properties;
-		ptomact((char*)xmlNodeGetContent(attr->children),h->mac);
+		char* mac_str = (char*)xmlNodeGetContent(attr->children);
+		ptomact(mac_str,h->mac);
+		free(mac_str);
 		//attr->name [mac]
 		//printf("%s / %s\n",attr->name,xmlNodeGetContent(attr->children));
 		for(addr_node=host_node->children;addr_node;addr_node=addr_node->next){
 			if (addr_node->type != XML_ELEMENT_NODE) { continue;}
 			if(strcmp((char*)addr_node->name,"ipv4")==0){ //ipv4 field
-				memcpy(h->ipv4[h->cnt_ipv4],xmlNodeGetContent(addr_node),IP4_LEN);
-				ptoipv4t((char*)xmlNodeGetContent(addr_node),h->ipv4[h->cnt_ipv4]);
-
+				char* ipv4_str = (char*)xmlNodeGetContent(addr_node);
+				ptoipv4t(ipv4_str,h->ipv4[h->cnt_ipv4]);
+				free(ipv4_str);
 				h->cnt_ipv4++;
 			}
 			else{ //ipv6 field
-				ptoipv6t((char*)xmlNodeGetContent(addr_node),h->ipv6[h->cnt_ipv6]);
+				char* ipv6_str = (char*)xmlNodeGetContent(addr_node);
+				ptoipv6t(ipv6_str,h->ipv6[h->cnt_ipv6]);
+				free(ipv6_str);
 				h->cnt_ipv6++;
 			}
 		}

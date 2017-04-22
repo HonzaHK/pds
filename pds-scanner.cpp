@@ -65,7 +65,8 @@ void my_callback(u_char *params,const struct pcap_pkthdr* pkthdr,const u_char* p
 
 void ipv6_scan(pcap_t* ifHandle,mac_t ifmac, ipv6_t ifip6){
 
-	uint8_t* pkt = icmpv6_pkt_build(ifmac,ifip6);
+	uint8_t pkt[PKT_ICMPV6_ECHOREQ_LEN];
+	icmpv6_pkt_echoreq_build(pkt,ifmac,ifip6);
 	int bytes_wr=pcap_inject(ifHandle,pkt,PKT_ICMPV6_ECHOREQ_LEN);
 	//printf("%d\n", bytes_wr);
 }
@@ -90,8 +91,9 @@ void ipv4_scan(in_addr netw, in_addr mask, mac_t src_mac, ipv4_t src_ip, pcap_t*
 	for (int i=0;i<(devcnt-1);i++){
 		in_addr tmp;
 		tmp.s_addr = htonl(ntohl(netw.s_addr) + (i+1));
-		uint8_t* pkt = arp_pkt_build(src_ip, *((ipv4_t*)&tmp.s_addr), src_mac, ipv4_mac_bcast, ARP_OP_REQUEST);
-		int bytes_written = pcap_inject(ifHandle, pkt, PKT_ARP_LEN);	
+		uint8_t pkt[PKT_ARP_LEN];
+		arp_pkt_build(pkt,src_ip, *((ipv4_t*)&tmp.s_addr), src_mac, ipv4_mac_bcast, ARP_OP_REQUEST);
+		int bytes_written = pcap_inject(ifHandle, pkt, PKT_ARP_LEN);
 		//printf("%d< ",bytes_written );
 		//pcap_dispatch(ifHandle,0,my_callback,NULL);
 		//usleep(50000);
@@ -129,9 +131,8 @@ int main(int argc, char* argv[]){
 		errbuf
 	);
 	if(lookup_return_code!=0){ printf("lookup err\n"); return 0;}
-	getifmac(iface.name,iface.mac);
-	getifipv4(iface.name,iface.ipv4);
-	getifipv6(iface.name,iface.ipv6);
+
+	get_if_addrs(iface.name,&iface);
 
 	pcap_activate(iface.handle);
 	ipv4_scan(netw,mask,iface.mac,iface.ipv4,iface.handle);

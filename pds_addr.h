@@ -16,6 +16,7 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <ifaddrs.h>
+#include <linux/if_packet.h>
 
 #define UNUSED(x) (void)(x) //suppress w-unused-parameter warnings
 
@@ -29,6 +30,15 @@ typedef uint8_t mac_t[MAC_LEN];
 typedef uint8_t ipv4_t[IP4_LEN];
 typedef uint8_t ipv6_t[IP6_LEN];
 
+typedef struct {
+	char* name;
+	pcap_t* handle;
+
+	mac_t mac;
+	ipv4_t ipv4;
+	ipv6_t ipv6;
+} iface_t;
+
 void mac_print(mac_t mac);
 void ipv4_print(ipv4_t ip);
 void ipv6_print(ipv6_t ip);
@@ -40,17 +50,7 @@ void macttop(mac_t mac, char str[MAC_ADDRSTRLEN]);
 void ipv4ttop(ipv4_t ip, char str[INET_ADDRSTRLEN]);
 void ipv6ttop(ipv6_t ip, char str[INET6_ADDRSTRLEN]);
 
-void getifmac(char* ifName, mac_t ifmac);
-void getifipv4(char* ifName, ipv4_t ifip4);
-void getifipv6(char *ifName, ipv6_t ifip6);
+void get_if_addrs(char *ifName, iface_t* iface);
 
-typedef struct {
-	char* name;
-	pcap_t* handle;
-
-	mac_t mac;
-	ipv4_t ipv4;
-	ipv6_t ipv6;
-} iface_t;
 
 #endif

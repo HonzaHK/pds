@@ -1,6 +1,6 @@
 SOURCE="pds-scanner.cpp pds_addr.cpp pds_pkt.cpp pds_host.cpp"
 EXECUTABLE="pds-scanner"
-FLAGS="-std=c++11 -Wall -Wextra -pedantic"
+FLAGS="-g -std=c++11 -Wall -Wextra -pedantic"
 OUTFILE="detected-devices.xml"
 INTERFACE="wlp3s0"
 LIB_PCAP="-lpcap"
