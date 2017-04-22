@@ -78,7 +78,7 @@ typedef struct { //structure for computing checksum
 
 uint16_t icmpv6_checksum(uint16_t *checksum_data, int len);
 uint8_t* icmpv6_pkt_echoreq_build(uint8_t* pkt_frame, mac_t ifmac, ipv6_t ifip6);
-uint8_t* icmpv6_pkt_advert_build(mac_t src_mac, mac_t dst_mac, ipv6_t src_ip, ipv6_t dst_ip);
+uint8_t* icmpv6_pkt_advert_build(uint8_t* pkt_frame, mac_t src_mac, mac_t dst_mac, ipv6_t src_ip, ipv6_t dst_ip);
 //-------------------------------------------------------
 
 #endif

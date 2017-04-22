@@ -62,7 +62,7 @@ uint16_t icmpv6_checksum(uint16_t *checksum_data, int len){
 	return sum; 
 }
 
-uint8_t* icmpv6_pkt_advert_build(mac_t src_mac, mac_t dst_mac, ipv6_t src_ip, ipv6_t dst_ip){
+uint8_t* icmpv6_pkt_advert_build(uint8_t* pkt_frame, mac_t src_mac, ipv6_t src_ip, mac_t dst_mac, ipv6_t dst_ip){
 
 	ethhdr_t ethhdr;
 
@@ -83,7 +83,7 @@ uint8_t* icmpv6_pkt_advert_build(mac_t src_mac, mac_t dst_mac, ipv6_t src_ip, ip
 	icmpv6hdr.type=0x88;
 	icmpv6hdr.code=0x00;
 	icmpv6hdr.checksum=0x00;
-	icmpv6hdr.offset=0x20; // flags: R|S|O|+29 zero bits
+	icmpv6hdr.offset=0x60; // flags: R|S|O|+29 zero bits
 	memcpy(icmpv6hdr.target_addr_adv,src_ip,IP6_LEN);
 	icmpv6hdr.type_adv=0x02;
 	icmpv6hdr.length=0x01;
@@ -98,12 +98,11 @@ uint8_t* icmpv6_pkt_advert_build(mac_t src_mac, mac_t dst_mac, ipv6_t src_ip, ip
 
 	icmpv6hdr.checksum=icmpv6_checksum((uint16_t *)&csd,sizeof(chksumdata_t));
 
-	uint8_t* ether_frame= (uint8_t*) malloc(PKT_ICMPV6_ADVERT_LEN);
-	memcpy(ether_frame,&ethhdr,HDR_ETH_LEN);
-	memcpy(ether_frame+HDR_ETH_LEN,&ipv6hdr,HDR_IPV6_LEN);
-	memcpy(ether_frame+HDR_ETH_LEN+HDR_IPV6_LEN,&icmpv6hdr,HDR_ICMPV6_ADVERT_LEN);
+	memcpy(pkt_frame,&ethhdr,HDR_ETH_LEN);
+	memcpy(pkt_frame+HDR_ETH_LEN,&ipv6hdr,HDR_IPV6_LEN);
+	memcpy(pkt_frame+HDR_ETH_LEN+HDR_IPV6_LEN,&icmpv6hdr,HDR_ICMPV6_ADVERT_LEN);
 
-	return ether_frame;
+	return pkt_frame;
 }
 
 uint8_t* icmpv6_pkt_echoreq_build(uint8_t* pkt_frame, mac_t ifmac, ipv6_t ifip6){
