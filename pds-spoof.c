@@ -3,8 +3,8 @@
 #include <signal.h>
 #include <ctype.h>
 
-#include "pds_addr.h"
-#include "pds_pkt.h"
+#include "pdslib/pds_addr.h"
+#include "pdslib/pds_pkt.h"
 
 typedef struct {
 	char* ifName;

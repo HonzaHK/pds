@@ -2,9 +2,9 @@
 //Author: Jan Kubis / xkubis13
 #include <signal.h>
 
-#include "pds_addr.h"
-#include "pds_pkt.h"
-#include "pds_host.h"
+#include "pdslib/pds_addr.h"
+#include "pdslib/pds_pkt.h"
+#include "pdslib/pds_host.h"
 
 typedef struct {
 	char* ifName;

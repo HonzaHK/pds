@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "pds_addr.h"
-#include "pds_host.h"
+#include "pdslib/pds_addr.h"
+#include "pdslib/pds_host.h"
 
 #define PAIR_MAX_CNT HOST_MAX_CNT / 2
 
