@@ -9,11 +9,12 @@
 #define HDR_IPV4_LEN 20 // IPv4 header length
 #define HDR_IPV6_LEN 40 // IPv6 header length
 #define HDR_ARP_LEN 28 // ARP header length
-#define HDR_ICMPV6_LEN 8 // ICMPv6 header length
+#define HDR_ICMPV6_ECHOREQ_LEN 8 // ICMPv6 echo request header length
+#define HDR_ICMPV6_ADVERT_LEN 32 // ICMPv6 echo request header length
 
 #define PKT_ARP_LEN HDR_ETH_LEN + HDR_ARP_LEN
-#define PKT_ICMPV6_LEN HDR_ETH_LEN + HDR_IPV6_LEN + HDR_ICMPV6_LEN
-
+#define PKT_ICMPV6_ECHOREQ_LEN HDR_ETH_LEN + HDR_IPV6_LEN + HDR_ICMPV6_ECHOREQ_LEN
+#define PKT_ICMPV6_ADVERT_LEN HDR_ETH_LEN + HDR_IPV6_LEN + HDR_ICMPV6_ADVERT_LEN
 
 // ARP --------------------------------------------------
 typedef struct {
@@ -60,9 +61,13 @@ typedef struct {
 	uint8_t code;
 	uint16_t checksum;
 	uint32_t offset;
+	ipv6_t target_addr_adv; //for advertisement only, 0x00 otherwise
+	uint8_t type_adv; //for advertisement only, 0x00 otherwise
+	uint8_t length; //for advertisement only, 0x00 otherwise
+	mac_t ll_addr; //for advertisement only, 0x00 otherwise
 } icmpv6hdr_t;
 
-typedef struct {
+typedef struct { //structure for computing checksum
 	ipv6_t src_ip;
 	ipv6_t dst_ip;
 	uint32_t icmpv6len;
@@ -72,6 +77,7 @@ typedef struct {
 
 uint16_t icmpv6_checksum(uint16_t *checksum_data, int len);
 uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6);
+uint8_t* icmpv6_pkt_advert_build(mac_t src_mac, mac_t dst_mac, ipv6_t src_ip, ipv6_t dst_ip);
 //-------------------------------------------------------
 
 #endif

@@ -78,14 +78,14 @@ void my_callback(u_char *params,const struct pcap_pkthdr* pkthdr,const u_char* p
 	}
 	
 	if(is_hosts_modified){
-		//hosts_print(hosts,host_cnt);
+		hosts_print(hosts,host_cnt);
 	}
 }
 
 void ipv6_scan(pcap_t* ifHandle,mac_t ifmac, ipv6_t ifip6){
 
 	uint8_t* pkt = icmpv6_pkt_build(ifmac,ifip6);
-	int bytes_wr=pcap_inject(ifHandle,pkt,PKT_ICMPV6_LEN);
+	int bytes_wr=pcap_inject(ifHandle,pkt,PKT_ICMPV6_ECHOREQ_LEN);
 	//printf("%d\n", bytes_wr);
 }
 

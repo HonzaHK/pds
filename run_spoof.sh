@@ -7,17 +7,21 @@ INTERFACE="wlp3s0"
 SPOOF_INTERVAL_MS="1000"
 PROTOCOL="arp"
 
-IP_LIBRA_BR="192.168.0.249"
-MAC_LIBRA_BR="0019.d2c1.93ab"
-
+#--------------------------------------------
 IP_LIBRA_UB="192.168.0.101"
+IP6_LIBRA_IB="fe80::21b:9eff:fe8a:8696"
 MAC_LIBRA_UB="001b.9e8a.8696"
 
-IP2="192.168.0.111"
-MAC2="dddd.eeee.ffff"
+IP_MATKA="192.168.0.104"
+IP6_MATKA="fe80::406d:9ecd:4460:c347"
+MAC_MATKA="3402.86cc.3553"
+#--------------------------------------------
+
 
 IP1=$IP_LIBRA_UB
 MAC1=$MAC_LIBRA_UB
+IP2=$IP_MATKA
+MAC2=$MAC_MATKA
 
 if [ -f $EXECUTABLE ]; then
 	sudo rm $EXECUTABLE

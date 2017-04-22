@@ -30,7 +30,7 @@ uint8_t* arp_pkt_build(ipv4_t src_ip, ipv4_t dst_ip, mac_t src_mac, mac_t dst_ma
 	arphdr.oper = htons(oper);
 	memcpy(&arphdr.src_mac, src_mac, MAC_LEN);
 	memcpy(&arphdr.src_ip, src_ip, IP4_LEN);
-	memcpy(&arphdr.dst_mac, dst_mac, MAC_LEN);
+	memcpy(&arphdr.dst_mac, dst_mac, MAC_LEN); //when broadcast in eth_header (when doing scan), this is DONT_CARE
 	memcpy(&arphdr.dst_ip, dst_ip, IP4_LEN);
 
 	uint8_t* ether_frame= (uint8_t*) malloc(PKT_ARP_LEN);
@@ -65,6 +65,50 @@ uint16_t icmpv6_checksum(uint16_t *checksum_data, int len){
 	return sum; 
 }
 
+uint8_t* icmpv6_pkt_advert_build(mac_t src_mac, mac_t dst_mac, ipv6_t src_ip, ipv6_t dst_ip){
+
+	ethhdr_t ethhdr;
+
+	memcpy(ethhdr.dst_mac, dst_mac, MAC_LEN);
+	memcpy(ethhdr.src_mac, src_mac, MAC_LEN);
+	ethhdr.type = htons(0x86dd);
+
+	ipv6hdr_t ipv6hdr;
+	ipv6hdr.first= (6<<4);
+	ipv6hdr.paylen=htons(HDR_ICMPV6_ADVERT_LEN);
+	ipv6hdr.nexthdr= 0x3a;
+	ipv6hdr.hoplimit=255;
+	memcpy(ipv6hdr.src_ip,src_ip,IP6_LEN);
+	memcpy(ipv6hdr.dst_ip,dst_ip,IP6_LEN);
+
+
+	icmpv6hdr_t icmpv6hdr;
+	icmpv6hdr.type=0x88;
+	icmpv6hdr.code=0x00;
+	icmpv6hdr.checksum=0x00;
+	icmpv6hdr.offset=0x20; // flags: R|S|O|+29 zero bits
+	memcpy(icmpv6hdr.target_addr_adv,src_ip,IP6_LEN);
+	icmpv6hdr.type_adv=0x02;
+	icmpv6hdr.length=0x01;
+	memcpy(icmpv6hdr.ll_addr,src_mac,MAC_LEN);
+
+	chksumdata_t csd;
+	memcpy(csd.src_ip,ipv6hdr.src_ip,16);
+	memcpy(csd.dst_ip,ipv6hdr.dst_ip,16);
+	csd.icmpv6len = htonl(HDR_ICMPV6_ADVERT_LEN);
+	csd.nexthdr = htonl(0x3a);
+	memcpy(&csd.icmpv6hdr,&icmpv6hdr,sizeof(icmpv6hdr_t));
+
+	icmpv6hdr.checksum=icmpv6_checksum((uint16_t *)&csd,sizeof(chksumdata_t));
+
+	uint8_t* ether_frame= (uint8_t*) malloc(PKT_ICMPV6_ADVERT_LEN);
+	memcpy(ether_frame,&ethhdr,HDR_ETH_LEN);
+	memcpy(ether_frame+HDR_ETH_LEN,&ipv6hdr,HDR_IPV6_LEN);
+	memcpy(ether_frame+HDR_ETH_LEN+HDR_IPV6_LEN,&icmpv6hdr,HDR_ICMPV6_ADVERT_LEN);
+
+	return ether_frame;
+}
+
 uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6){
 	ethhdr_t ethhdr;
 
@@ -88,7 +132,7 @@ uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6){
 
 	ipv6hdr_t ipv6hdr;
 	ipv6hdr.first= (6<<4);
-	ipv6hdr.paylen=htons(HDR_ICMPV6_LEN);
+	ipv6hdr.paylen=htons(HDR_ICMPV6_ECHOREQ_LEN);
 	ipv6hdr.nexthdr= 0x3a;
 	ipv6hdr.hoplimit=1;
 	memcpy(ipv6hdr.src_ip,ifip6,IP6_LEN);
@@ -100,20 +144,25 @@ uint8_t* icmpv6_pkt_build(mac_t ifmac, ipv6_t ifip6){
 	icmpv6hdr.code=0x00;
 	icmpv6hdr.checksum=0x00;
 	icmpv6hdr.offset=0x00;
+	//set next fields to 0x00 - only for checksum - we wont even send them
+	memset(icmpv6hdr.target_addr_adv,0x00,IP6_LEN);
+	icmpv6hdr.type_adv=0x00;
+	icmpv6hdr.length=0x00;
+	memset(icmpv6hdr.ll_addr,0x00,MAC_LEN);
 
 	chksumdata_t csd;
 	memcpy(csd.src_ip,ipv6hdr.src_ip,16);
 	memcpy(csd.dst_ip,ipv6hdr.dst_ip,16);
-	csd.icmpv6len = htonl(HDR_ICMPV6_LEN);
+	csd.icmpv6len = htonl(HDR_ICMPV6_ECHOREQ_LEN);
 	csd.nexthdr = htonl(0x3a);
 	memcpy(&csd.icmpv6hdr,&icmpv6hdr,sizeof(icmpv6hdr_t));
 
 	icmpv6hdr.checksum=icmpv6_checksum((uint16_t *)&csd,sizeof(chksumdata_t));
 
-	uint8_t* ether_frame= (uint8_t*) malloc(PKT_ICMPV6_LEN);
-	memcpy(ether_frame,&ethhdr,sizeof(ethhdr_t));
-	memcpy(ether_frame+HDR_ETH_LEN,&ipv6hdr,sizeof(ipv6hdr_t));
-	memcpy(ether_frame+HDR_ETH_LEN+HDR_IPV6_LEN,&icmpv6hdr,sizeof(icmpv6hdr_t));
+	uint8_t* ether_frame= (uint8_t*) malloc(PKT_ICMPV6_ECHOREQ_LEN);
+	memcpy(ether_frame,&ethhdr,HDR_ETH_LEN);
+	memcpy(ether_frame+HDR_ETH_LEN,&ipv6hdr,HDR_IPV6_LEN);
+	memcpy(ether_frame+HDR_ETH_LEN+HDR_IPV6_LEN,&icmpv6hdr,HDR_ICMPV6_ECHOREQ_LEN);
 
 	return ether_frame;
 }
