@@ -42,9 +42,9 @@ void intercept(iface_t iface, host_t hosts[HOST_MAX_CNT]){
 		if(res==0){continue;}
 		ethhdr_t* ethhdr = (ethhdr_t*) pkt;
 		host_t* h_src=host_lookup(hosts,host_cnt,ethhdr->src_mac);
-		if(h_src==NULL){ continue;}//not one of our hosts
+		if(h_src==NULL){ continue;} //not one of our hosts
 		host_t* h_dst=host_paired_lookup(h_src,hosts,host_cnt);
-
+		if(h_dst==NULL){ continue;} //noone other in the same group
 		memcpy(&ethhdr->dst_mac,h_dst->mac,MAC_LEN);
 		memcpy(&ethhdr->src_mac,iface.mac,MAC_LEN);
 		pcap_inject(iface.handle,pkt,pkthdr->len);

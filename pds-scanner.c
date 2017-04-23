@@ -100,7 +100,7 @@ void ipv4_scan(in_addr netw, in_addr mask, mac_t src_mac, ipv4_t src_ip, pcap_t*
 		uint8_t pkt[PKT_ARP_LEN];
 		arp_pkt_build(pkt,src_ip, *((ipv4_t*)&tmp.s_addr), src_mac, ipv4_mac_bcast, ARP_OP_REQUEST);
 		pcap_inject(ifHandle, pkt, PKT_ARP_LEN);
-		//if(i%200==0){pcap_dispatch(ifHandle,0,my_callback,NULL);} // collect every 200th ping to empty buffer
+		if(i%200==0){pcap_dispatch(ifHandle,0,my_callback,NULL);} // collect every 200th ping to empty buffer
 		if(sigint_recv){break;}
 		//usleep(1000);
 	}
