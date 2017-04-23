@@ -34,6 +34,22 @@ host_t* host_lookup(host_t* hosts, int host_cnt, mac_t mac){
 	return h;
 }
 
+//returns ptr to host which is in the same group as h, NULL when not found
+host_t* host_paired_lookup(host_t* h, host_t* hosts, int host_cnt){
+	host_t* h_paired = NULL;
+
+	for(int i=0;i<host_cnt;i++){
+		host_t* tmp = &hosts[i];
+
+		if(tmp->pair_id==h->pair_id && (memcmp(tmp->mac, h->mac, 6)!=0)){ //if same group && different mac
+			h_paired=tmp;
+			break;
+		}
+	}
+
+	return h_paired;
+}
+
 host_t* host_add(host_t hosts[HOST_MAX_CNT], int index, mac_t mac){
 	host_t* h = &hosts[index];
 	memcpy(h->mac,mac,MAC_LEN);
@@ -73,7 +89,7 @@ void hostsToXml(host_t hosts[HOST_MAX_CNT], int host_cnt, char* filename){
 	for(int i=0;i<host_cnt;i++){
 		host_t h_tmp = hosts[i];
 		macttop(h_tmp.mac,str_mac);
-		fprintf(fd,"\t<host mac=\"");fprintf(fd, "%s",str_mac);if(h_tmp.is_paired){fprintf(fd," group=\"victim-pair-%d\"", h_tmp.pair_id);}fprintf(fd,"\">\n");
+		fprintf(fd,"\t<host mac=");fprintf(fd, "\"%s\"",str_mac);if(h_tmp.is_paired){fprintf(fd," group=\"victim-pair-%d\"", h_tmp.pair_id);}fprintf(fd,">\n");
 		for(int j=0;j<h_tmp.cnt_ipv4;j++){
 			ipv4ttop(h_tmp.ipv4[j],str_ip4);
 			fprintf(fd,"\t\t<ipv4>");fprintf(fd, "%s",str_ip4);fprintf(fd,"</ipv4>\n");
@@ -105,12 +121,16 @@ void xmlToHosts(const char* filename, host_t hosts[HOST_MAX_CNT],int* host_cnt){
 	for(host_node = devices_node->children; host_node; host_node = host_node->next) {
 		if (host_node->type != XML_ELEMENT_NODE) { continue;}
 		host_t* h = &hosts[*host_cnt];
-		attr = host_node->properties;
+		attr = host_node->properties; //mac attribute
 		char* mac_str = (char*)xmlNodeGetContent(attr->children);
 		ptomact(mac_str,h->mac);
 		free(mac_str);
-		//attr->name [mac]
-		//printf("%s / %s\n",attr->name,xmlNodeGetContent(attr->children));
+		if((attr = host_node->properties->next)!=NULL){ //group attribute
+			char* gr_id_str = (char *)xmlNodeGetContent(attr->children);
+			h->is_paired=true;
+			sscanf(gr_id_str,"victim-pair-%d",&h->pair_id);
+			free(gr_id_str);
+		}
 		for(addr_node=host_node->children;addr_node;addr_node=addr_node->next){
 			if (addr_node->type != XML_ELEMENT_NODE) { continue;}
 			if(strcmp((char*)addr_node->name,"ipv4")==0){ //ipv4 field

@@ -24,6 +24,7 @@ typedef struct host {
 
 void hosts_print(host_t* hosts, int host_cnt);
 host_t* host_lookup(host_t* hosts, int host_cnt, mac_t mac);
+host_t* host_paired_lookup(host_t* h, host_t* hosts, int host_cnt);
 host_t* host_add(host_t hosts[HOST_MAX_CNT], int index, mac_t mac);
 void host_add_ipv4(host_t* h, ipv4_t ip);
 void host_add_ipv6(host_t* h, ipv6_t ip);

@@ -45,19 +45,19 @@ uint16_t icmpv6_checksum(uint16_t *checksum_data, int len){
 	uint32_t sum = 0;
 	uint16_t odd_byte;
 	
-	while (len > 1) {
-		sum += *checksum_data++;
-		len -= 2;
+	while(len>1){
+		sum+= *checksum_data++;
+		len-= 2; //one 16bit (2B) block is read-out
 	}
 	
-	if (len == 1) {
-		*(uint8_t*)(&odd_byte) = * (uint8_t*)checksum_data;
-		sum += odd_byte;
+	if (len == 1){ //handle odd length according to RFC
+		*(uint8_t*)(&odd_byte)= *(uint8_t*)checksum_data; //treat both as 8b blocks
+		sum+= odd_byte;
 	}
 	
-	sum =  (sum >> 16) + (sum & 0xffff);
-	sum += (sum >> 16);
-	sum = ~sum;
+	sum=  (sum >> 16) + (sum & 0xffff);
+	sum+= (sum >> 16);
+	sum= ~sum;
 	
 	return sum; 
 }

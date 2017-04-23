@@ -35,16 +35,19 @@ int parseArgs(int argc, char* argv[], clargs_t *clargs){
 
 void intercept(iface_t iface, host_t hosts[HOST_MAX_CNT]){
 	struct pcap_pkthdr *pkthdr;
-	const unsigned char *packet=NULL;
+	const unsigned char *pkt=NULL;
 
 	int res;
-	printf("AA\n");
-	while ( (res = pcap_next_ex(iface.handle,&pkthdr,&packet)) >= 0){  /* Get one packet */ 
-		// printf("attempt %d: ", i);
-		//if(res==0){printf("timeout\n");}
+	while ( (res = pcap_next_ex(iface.handle,&pkthdr,&pkt)) >= 0){  /* Get one packet */ 
 		if(res==0){continue;}
-		printf("packet\n");
-		// printf("%d\n", res);
+		ethhdr_t* ethhdr = (ethhdr_t*) pkt;
+		host_t* h_src=host_lookup(hosts,host_cnt,ethhdr->src_mac);
+		if(h_src==NULL){ continue;}//not one of our hosts
+		host_t* h_dst=host_paired_lookup(h_src,hosts,host_cnt);
+
+		memcpy(&ethhdr->dst_mac,h_dst->mac,MAC_LEN);
+		memcpy(&ethhdr->src_mac,iface.mac,MAC_LEN);
+		pcap_inject(iface.handle,pkt,pkthdr->len);
 	}
 }
 
@@ -55,12 +58,10 @@ int main(int argc, char* argv[]){
 	iface_t iface;
 
 	if(parseArgs(argc,argv,&clargs)!=0){
-		printf("eee\n");
 		return 0;
 	}
 
 	xmlToHosts(clargs.fileName,hosts,&host_cnt);
-	printf("%d\n", host_cnt);
 
 	char errbuf[PCAP_ERRBUF_SIZE];
 	if ((iface.handle=pcap_open_live(clargs.ifName, BUFSIZ, 1, 1000, errbuf))==NULL) {
